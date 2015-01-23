@@ -4,7 +4,6 @@
   "groupID": 0,
   "setUID": false,
   "userID": 0,
-  "logging": "verbose",
   "doNotForwardHeaders": ["Origin"],
   "spoofHeaders": {
     "Referer": "https://www.duckduckgo.com",

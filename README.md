@@ -59,7 +59,6 @@ options.  The configuration file can be found in `src/config/config.json`.
 * `groupID`: **int** - The new group ID for the bundler service.
 * `setUID`: **bool** - True when the bundler service should change its user ID.
 * `userID`: **int** - The new user ID for the bundler service.
-* `logging`: **string** - Either "verbose", "quiet", or "debug".
 * `doNotForwardHeaders`: **array(string)** - An array of HTTP headers that should not be forwarded.
 * `spoofHeaders`: **map(string, string)** - A mapping of headers to rewrite to their new value.
 
