@@ -48,6 +48,27 @@ is
 Note here that the callback is not something is exposed to the programmer to make use of
 intermediate results handlers produce, but is simply pushed along to `async.parallel`.
 
+# Configuration
+
+As bundler evolves, it will support various configuration options so that it can meet
+the needs of more users.  Below is a list of supported and unsupported configuration
+options.  The configuration file can be found in `src/config/config.json`.
+
+* `runAsDaemon`: **bool** - Tells the bundler service to run as a daemon.
+* `setGID`: **bool** - True when the bundler service should change its group ID.
+* `groupID`: **int** - The new group ID for the bundler service.
+* `setUID`: **bool** - True when the bundler service should change its user ID.
+* `userID`: **int** - The new user ID for the bundler service.
+* `logging`: **string** - Either "verbose", "quiet", or "debug".
+* `doNotForwardHeaders`: **array(string)** - An array of HTTP headers that should not be forwarded.
+* `spoofHeaders`: **map(string, string)** - A mapping of headers to rewrite to their new value.
+
+For more information about permission setting with `setGID` and `setUID` see the
+[relevant Node.js API information](http://nodejs.org/api/process.html#process_process_setgid_id).
+
+For more information about HTTP headers, see 
+[Wikipedia's page on the subject](http://en.wikipedia.org/wiki/List_of_HTTP_header_fields).
+
 # Testing
 
 To run the module test script, simply run the command
