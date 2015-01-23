@@ -112,8 +112,13 @@ function fetchAndReplace(attr, elem, diff, url, callback) {
     return;
   }
   var resurl = urllib.resolve(url, resource);
-  var requestData = {url: resurl};
-  request(requestData, function (err, response, body) {
+  var headerData = {headers: config.spoofHeaders};
+  for (var i = 0, len = config.doNotForwardHeaders.length; i < len; ++i) {
+    headerData.headers[config.doNotForwardHeaders[i]] = '';
+  }
+  log.debug('URL: %s', resurl);
+  log.debug('Header data: %j', headerData);
+  request({url: resurl, headers: headerData}, function (err, response, body) {
     if (err) {
       // Here, the callback is actually the function that continues
       // iterating in async.reduce, so it is imperitive that we call it.
