@@ -43,7 +43,7 @@ is
 
 1. `$` is a [Cheerio](https://github.com/cheeriojs/cheerio) object loaded with the HTML of the page being bundled
 2. `url` is the original URL of the page being bundled, e.g. `https://google.com`
-3. `callback` is a callback called by `[async.parallel](https://github.com/caolan/async#parallel)` to iterate through handlers
+3. `callback` is a callback called by [async.parallel](https://github.com/caolan/async#parallel) to iterate through handlers
 
 Note here that the callback is not something is exposed to the programmer to make use of
 intermediate results handlers produce, but is simply pushed along to `async.parallel`.
