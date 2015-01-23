@@ -1,0 +1,9 @@
+{"level":"info","message":"Got request to bundle https://en.wikipedia.org/wiki/Data_URI_scheme","timestamp":"2015-01-23T23:49:54.935Z"}
+{"level":"info","message":"Beginning bundling process for https://en.wikipedia.org/wiki/Data_URI_scheme","timestamp":"2015-01-23T23:49:55.461Z"}
+{"level":"info","message":"Found 9 resources in https://en.wikipedia.org/wiki/Data_URI_scheme with selector img","timestamp":"2015-01-23T23:49:55.494Z"}
+{"level":"info","message":"Got request to bundle https://en.wikipedia.org/wiki/Data_URI_scheme","timestamp":"2015-01-23T23:50:15.633Z"}
+{"level":"info","message":"Beginning bundling process for https://en.wikipedia.org/wiki/Data_URI_scheme","timestamp":"2015-01-23T23:50:16.127Z"}
+{"level":"info","message":"Found 9 resources in https://en.wikipedia.org/wiki/Data_URI_scheme with selector img","timestamp":"2015-01-23T23:50:16.159Z"}
+{"level":"info","message":"Found 2 resources in https://en.wikipedia.org/wiki/Data_URI_scheme with selector link[rel=\"stylesheet\"]","timestamp":"2015-01-23T23:50:16.163Z"}
+{"level":"info","message":"Found 9 resources in https://en.wikipedia.org/wiki/Data_URI_scheme with selector script","timestamp":"2015-01-23T23:50:16.165Z"}
+{"level":"info","message":"Got bundlefor https://en.wikipedia.org/wiki/Data_URI_scheme","timestamp":"2015-01-23T23:50:18.787Z"}

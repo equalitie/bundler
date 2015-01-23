@@ -8,18 +8,20 @@
 var _ = require('lodash');
 var mime = require('mime');
 var async = require('async');
-var request = require('superagent');
-var request2 = require('request');
+var request = require('request');
 var cheerio = require('cheerio');
 var winston = require('winston');
 var urllib = require('url');
 var path = require('path');
+var fs = require('fs');
+
+var config = JSON.parse(fs.readFileSync(path.join('config', 'config.json')));
 
 var log = new (winston.Logger)({
   transports: [
     new (winston.transports.File)({
       name: 'infoFile',
-      filename: path.join('..', 'log', 'info.log'),
+      filename: path.join('log', 'info.log'),
       level: 'info'
     }),
     new (winston.transports.File)({
@@ -110,34 +112,17 @@ function fetchAndReplace(attr, elem, diff, url, callback) {
     return;
   }
   var resurl = urllib.resolve(url, resource);
-  request.get(resurl).end(function (err, result) {
-    if (!err) {
-      var source;
-      if (Buffer.isBuffer(result.body)) {
-        source = result.body;
-        writeDiff(resource, resurl, source, diff, callback);
-      } else if (typeof result.text !== 'undefined') {
-        source = new Buffer(result.text);
-        writeDiff(resource, resurl, source, diff, callback);
-      } else {
-        // Retry the request in the weird cases where superagent fails.
-        log.info('Superagent failed to retrieve data for %s', url);
-        request2(resurl, function (err, response, body) {
-          if (err) {
-            // Here, the callback is actually the function that continues
-            // iterating in async.reduce, so it is imperitive that we call it.
-            log.error('Both Superagent and request.js failed to fetch %s', url);
-            log.error('Error produced by request.js: %s', err.message);
-            callback(err, diff);
-          } else {
-            source = new Buffer(body);
-            writeDiff(resource, resurl, source, diff, callback);
-          }
-        });
-      }
-    } else {
-      log.error('Superagent request for %s resulted in error: %s', url, err.message);
+  var requestData = {url: resurl};
+  request(requestData, function (err, response, body) {
+    if (err) {
+      // Here, the callback is actually the function that continues
+      // iterating in async.reduce, so it is imperitive that we call it.
+      log.error('request.js failed to fetch %s', url);
+      log.error('Error: %s', err.message);
       callback(err, diff);
+    } else {
+      source = new Buffer(body);
+      writeDiff(resource, resurl, source, diff, callback);
     }
   });
 }
@@ -195,13 +180,13 @@ module.exports = {
 
   makeBundle: function (url, handlers, callback) {
     log.info('Got request to bundle %s', url);
-    request.get(url).end(function (err, result) {
+    request(url, function (err, response, body) {
       if (err) {
         log.error('Could not fetch %s. Error: %s', url, err.message);
-        callback(err, result);
+        callback(err, response);
       } else {
         log.info('Beginning bundling process for %s', url);
-        replaceResources(url, result.text, handlers, callback);
+        replaceResources(url, body, handlers, callback);
       }
     });
   }

@@ -13,7 +13,6 @@
     "request": "latest",
     "async": "latest",
     "lodash": "latest",
-    "superagent": "latest",
     "mime": "latest",
     "cheerio": "latest"
   },
