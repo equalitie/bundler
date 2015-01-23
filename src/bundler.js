@@ -11,7 +11,27 @@ var async = require('async');
 var request = require('superagent');
 var request2 = require('request');
 var cheerio = require('cheerio');
+var winston = require('winston');
 var urllib = require('url');
+var path = require('path');
+
+var log = new (winston.Logger)({
+  transports: [
+    new (winston.transports.File)({
+      name: 'infoFile',
+      filename: path.join('..', 'log', 'info.log'),
+      level: 'info'
+    }),
+    new (winston.transports.File)({
+      name: 'errorFile',
+      filename: path.join('..', 'log', 'error.log'),
+      level: 'error'
+    }),
+    new (winston.transports.Console)({
+      level: 'debug'
+    })
+  ]
+});
 
 function replaceResources(url, html, handlers, callback) {
   var $ = cheerio.load(html);
@@ -27,10 +47,12 @@ function replaceResources(url, html, handlers, callback) {
   // resource URLs to their data URIs, so we merge them together here.
   async.parallel(functions, function (err, diffs) {
     if (err) {
+      log.error('Error occurred in async.parallel: %s', err.message);
       callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
       html = applyDiffs(html, allDiffs);
+      log.info('Got bundlefor ' + url);
       callback(null, html);
     }
   });
@@ -84,10 +106,10 @@ function fetchAndReplace(attr, elem, diff, url, callback) {
   // For some reason top-level pages might make it here
   // and we want to break the function before trying to fetch them.
   if (typeof resource === 'undefined' || !resource) {
+    log.error('%s accidentally landed in the list of resources to fetch.', url);
     return;
   }
   var resurl = urllib.resolve(url, resource);
-  //request2(resurl, function (err, response, body) {
   request.get(resurl).end(function (err, result) {
     if (!err) {
       var source;
@@ -99,10 +121,13 @@ function fetchAndReplace(attr, elem, diff, url, callback) {
         writeDiff(resource, resurl, source, diff, callback);
       } else {
         // Retry the request in the weird cases where superagent fails.
+        log.info('Superagent failed to retrieve data for %s', url);
         request2(resurl, function (err, response, body) {
           if (err) {
             // Here, the callback is actually the function that continues
             // iterating in async.reduce, so it is imperitive that we call it.
+            log.error('Both Superagent and request.js failed to fetch %s', url);
+            log.error('Error produced by request.js: %s', err.message);
             callback(err, diff);
           } else {
             source = new Buffer(body);
@@ -111,6 +136,7 @@ function fetchAndReplace(attr, elem, diff, url, callback) {
         });
       }
     } else {
+      log.error('Superagent request for %s resulted in error: %s', url, err.message);
       callback(err, diff);
     }
   });
@@ -122,6 +148,7 @@ function replaceAll($, selector, url, attr, callback) {
     var $_this = $(this);
     elements.push($_this);
   });
+  log.info('Found %d resources in %s with selector %s', elements.length, url, selector);
   async.reduce(elements, {}, function (memo, item, next) {
     if (typeof item.attr(attr) === 'undefined') {
       // In the case that we get something like a <script> tag with no
@@ -145,14 +172,17 @@ function replaceAll($, selector, url, attr, callback) {
  */
 
 function replaceImages($, url, callback) {
+  log.debug('Calling replaceImages handler');
   replaceAll($, 'img', url, 'src', callback);
 }
 
 function replaceCSSFiles($, url, callback) {
+  log.debug('Calling replaceCSSFiles handler');
   replaceAll($, 'link[rel="stylesheet"]', url, 'href', callback);
 }
 
 function replaceJSFiles($, url, callback) {
+  log.debug('Calling replaceJSFiles handler');
   replaceAll($, 'script', url, 'src', callback);
 }
 
@@ -164,10 +194,13 @@ module.exports = {
   replaceJSFiles: replaceJSFiles,
 
   makeBundle: function (url, handlers, callback) {
+    log.info('Got request to bundle %s', url);
     request.get(url).end(function (err, result) {
       if (err) {
+        log.error('Could not fetch %s. Error: %s', url, err.message);
         callback(err, result);
       } else {
+        log.info('Beginning bundling process for %s', url);
         replaceResources(url, result.text, handlers, callback);
       }
     });

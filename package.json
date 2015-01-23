@@ -9,6 +9,7 @@
     "test": "mocha -t 20000 test/bundle.js"
   },
   "dependencies": {
+    "winston": "latest",
     "request": "latest",
     "async": "latest",
     "lodash": "latest",
