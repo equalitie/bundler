@@ -1,0 +1,28 @@
+{
+  "name": "bundler",
+  "description": "A utility for inlining resources used by web pages using data URI schemes",
+  "version": "0.1.0",
+  "engines": ">= 0.10.0",
+  "author": "Zack Mullaly <redwire@riseup.net>",
+  "main": "./src/bundler.js",
+  "scripts": {
+    "test": "mocha -t 20000 test/bundle.js"
+  },
+  "dependencies": {
+    "request": "latest",
+    "async": "latest",
+    "lodash": "latest",
+    "superagent": "latest",
+    "mime": "latest",
+    "cheerio": "latest"
+  },
+  "devDependencies": {
+    "mocha": "latest",
+    "should": "^4.6.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/equalitie/bundler.git"
+  },
+  "license": "GPL v3"
+}
