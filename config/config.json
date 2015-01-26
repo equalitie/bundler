@@ -1,10 +1,7 @@
 {
-  "runAsDaemon": false,
-  "setGID": false,
-  "groupID": 0,
-  "setUID": false,
-  "userID": 0,
-  "doNotForwardHeaders": ["Origin"],
+  "doNotForwardHeaders": [
+    "Origin"
+  ],
   "spoofHeaders": {
     "Referer": "https://www.duckduckgo.com",
     "Via": "1.0 Bundler",
