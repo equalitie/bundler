@@ -24,6 +24,6 @@ module.exports = {
 
   dataURI: function (url, content) {
     var encoded = content.toString('base64');
-    return 'data:' + mimetype(url) + ';base64,' + encoded;
+    return 'data:' + this.mimetype(url) + ';base64,' + encoded;
   }
 };

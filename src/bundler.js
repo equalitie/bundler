@@ -145,65 +145,11 @@ function applyDiffs(string, diffs) {
   return string;
 }
 
-function writeDiff(resource, resurl, source, diff, callback) {
-  var newuri = dataURI(resurl, source);
-  var newDiff = {};
-  newDiff[resource] = newuri;
-  callback(null, _.extend(diff, newDiff));
-}
-
-function fetchAndReplace(attr, elem, diff, url, callback) {
-  var resource = elem.attr(attr);
-  // For some reason top-level pages might make it here
-  // and we want to break the function before trying to fetch them.
-  if (typeof resource === 'undefined' || !resource) {
-    log.error('%s accidentally landed in the list of resources to fetch.', url);
-    return;
-  }
-  var resurl = urllib.resolve(url, resource);
-  var headerData = {headers: config.spoofHeaders};
-  for (var i = 0, len = config.doNotForwardHeaders.length; i < len; ++i) {
-    headerData.headers[config.doNotForwardHeaders[i]] = '';
-  }
-  log.debug('URL: %s', resurl);
-  log.debug('Header data: %j', headerData);
-  request({url: resurl, headers: headerData}, function (err, response, body) {
-    if (err) {
-      // Here, the callback is actually the function that continues
-      // iterating in async.reduce, so it is imperitive that we call it.
-      log.error('request.js failed to fetch %s', url);
-      log.error('Error: %s', err.message);
-      callback(err, diff);
-    } else {
-      source = new Buffer(body);
-      writeDiff(resource, resurl, source, diff, callback);
-    }
-  });
-}
-
-function replaceAll($, selector, url, attr, callback) {
-  var elements = [];
-  $(selector).each(function (index, elem) {
-    var $_this = $(this);
-    elements.push($_this);
-  });
-  log.info('Found %d resources in %s with selector %s', elements.length, url, selector);
-  async.reduce(elements, {}, function (memo, item, next) {
-    if (typeof item.attr(attr) === 'undefined') {
-      // In the case that we get something like a <script> tag with no
-      // source or href to fetch, just skip it.
-      next(null, memo);
-    } else {
-      fetchAndReplace(attr, item, memo, url, next);
-    }
-  }, callback);
-}
-
 module.exports = {
   helpers: helpers,
-  modifyRequest: requestModifiers,
+  modifyRequests: requestModifiers,
   resources: resources,
-  changeRequestBehavior: preResource,
+  changeRequestBehavior: beforeResource,
   modifyReplacements: postResource,
   Bundler: Bundler
 };

@@ -4,6 +4,7 @@
  */
 
 var winston = require('winston');
+var path = require('path');
 
 module.exports = new (winston.Logger)({
   transports: [

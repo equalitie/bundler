@@ -10,6 +10,7 @@
  */
 
 var _ = require('lodash');
+var log = require('./logger');
 
 module.exports = {
   stripHeaders: function (headers) {

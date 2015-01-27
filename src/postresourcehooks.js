@@ -15,7 +15,7 @@ module.exports = {
       var newDiffs = {};
       var sources = Object.keys(diffs);
       for (var i = 0, len = sources.length; i < len; ++i) {
-        if (predicate(sources[i], diffs[sources[i]]) {
+        if (predicate(sources[i], diffs[sources[i]])) {
           newDiffs[sources[i]] = diffs[sources[i]];
         }
       }
