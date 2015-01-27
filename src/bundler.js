@@ -5,78 +5,127 @@
  * replace different resources as well as a couple of functions, namely
  * mimetype and dataURI to help in writing custom handlers.
  */
+ 
 var _ = require('lodash');
-var mime = require('mime');
 var async = require('async');
 var request = require('request');
 var cheerio = require('cheerio');
-var winston = require('winston');
 var urllib = require('url');
 var path = require('path');
 var fs = require('fs');
+var requestModifiers = require('./requestmodifiers');
+var resources = require('./resourcehandlers');
+var beforeResource = require('./preresourcehooks');
+var postResource = require('./postresourcehooks');
+var helpers = require('./helpers');
+var log = require('./logger');
 
 var config = JSON.parse(fs.readFileSync(path.join('config', 'config.json')));
 
-var log = new (winston.Logger)({
-  transports: [
-    new (winston.transports.File)({
-      name: 'infoFile',
-      filename: path.join('log', 'info.log'),
-      level: 'info'
-    }),
-    new (winston.transports.File)({
-      name: 'errorFile',
-      filename: path.join('..', 'log', 'error.log'),
-      level: 'error'
-    }),
-    new (winston.transports.Console)({
-      level: 'debug'
-    })
-  ]
-});
+var Bundler = function (url) {
+  this.url = url;
+  this.resourceHandlers = [];
+  this.preInitHooks = [];
+  this.preResourcesHooks = [];
+  this.postResourcesHooks = [];
+  this.callback = function () {};
+};
 
-function replaceResources(url, html, handlers, callback) {
-  var $ = cheerio.load(html);
-  var functions = [];
-  for (var i = 0, len = handlers.length; i < len; ++i) {
-    functions.push(function (index) {
-      return function (asynccallback) {
-        handlers[index]($, url, asynccallback);
-      };
-    }(i));
-  }
-  // The call to `async.parallel` will produce an array of objects mapping
-  // resource URLs to their data URIs, so we merge them together here.
-  async.parallel(functions, function (err, diffs) {
+Bundler.prototype.useHandler = function (handler) {
+  this.resourceHandlers.push(handler);
+  return this;
+};
+
+Bundler.prototype.beforeOriginalRequest = function (hook) {
+  this.preInitHooks.push(hook);
+  return this;
+};
+
+Bundler.prototype.beforeFetchingResources = function (hook) {
+  this.preResourcesHooks.push(hook);
+  return this;
+};
+
+Bundler.prototype.afterFetchingResources = function (hook) {
+  this.postResourcesHooks.push(hook);
+  return this;
+};
+
+Bundler.prototype.send = function (callback) {
+  this.callback = callback;
+  var initOptions = request.defaults({url: this.url});
+  async.reduce(this.preInitHooks, initOptions, function (memo, hook, next) {
+    hook(memo, next);
+  }, function (err, options) {
     if (err) {
-      log.error('Error occurred in async.parallel: %s', err.message);
-      callback(err, null);
+      log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
+      this.callback(err, null);
     } else {
-      var allDiffs = _.reduce(diffs, _.extend);
-      html = applyDiffs(html, allDiffs);
-      log.info('Got bundlefor ' + url);
-      callback(null, html);
+      makeBundle(this, options);
     }
   });
 }
 
-var mimetype = function(url) {
-  var i = url.lastIndexOf('.');
-  var defaultMT = 'text/plain';
-  if (i < 0) {
-    return defaultMT;
-  }
-  var ext = '.' + url.substring(i, url.length);
-  ext = ext.match(/\.\w+/);
-  if (ext) {
-    return mime.lookup(ext[0]);
-  }
-  return defaultMT;
-};
+function makeBundle(bundler, options) {
+  request(options, function (err, res, body) {
+    if (err) {
+      log.error('Error making request to %s; Error: %s', bundler.url, err.message);
+      bundler.callback(err, null);
+    } else {
+      replaceResources(bundler, res, body);
+    }
+  });
+}
 
-function dataURI(url, content) {
-  var encoded = content.toString('base64');
-  return 'data:' + mimetype(url) + ';base64,' + encoded;
+function replaceResources(bundler, response, body) {
+  var $ = cheerio.load(body);
+  async.reduce(this.preResourcesHooks, {}, function (memo, hook, next) {
+    // Call the hook with arguments in the same order that the request modifier hooks
+    // expect them to come in so that they could be reused here just as well.
+    hook(memo, hook, $, response);
+  }, function (err, options) {
+    if (err) {
+      log.error('Error calling pre-resource-handler hooks; Error: %s', err.message);
+      bundler.callback(err, null);
+    } else {
+      invokeHandlers(bundler, $, options);
+    }
+  });
+}
+
+function invokeHandlers(bundler, $, options) {
+  var handlers = [];
+  for (var i = 0, len = bundler.resourceHandlers.length; i < len; ++i) {
+    handlers.push(function (index) {
+      return function (asynccb) {
+        bundler.resourceHandlers[index]($, bundler.url, options, asynccb);
+      };
+    }(i));
+  }
+  async.parallel(handlers, function (err, diffs) {
+    if (err) {
+      log.error('Error calling resource handler; Error: %s', err.message);
+      bundler.callback(err, null);
+    } else {
+      var allDiffs = _.reduce(diffs, _.extend);
+      log.info('Got bundle for %s', bundler.url);
+      handleDiffs(bundler, $.html(), allDiffs);
+    }
+  });
+}
+
+function handleDiffs(bundler, html, diffs) {
+  async.reduce(bundler.postResourcesHooks, diffs, function (memo, hook, next) {
+    hook(diffs, next);
+  }, function (err, newDiffs) {
+    if (err) {
+      log.error('Error calling post-resources hooks; Error: %s', err.message);
+      bundler.callback(err, null);
+    } else {
+      html = applyDiffs(html, newDiffs);
+      bundler.callback(null, html);
+    }
+  });
 }
 
 function strReplaceAll(string, str1, str2) {
@@ -150,49 +199,12 @@ function replaceAll($, selector, url, attr, callback) {
   }, callback);
 }
 
-/***********************
- ** Handler Functions **
- ***********************
- * 
- * Handlers expect to be called with:
- * $   - A cheerio instance containing the HTML to scan for resources.
- * url - The URL of the original request.
- * The callback parameter will be provided by async to iterate through
- * a series of handler calls.
- */
-
-function replaceImages($, url, callback) {
-  log.debug('Calling replaceImages handler');
-  replaceAll($, 'img', url, 'src', callback);
-}
-
-function replaceCSSFiles($, url, callback) {
-  log.debug('Calling replaceCSSFiles handler');
-  replaceAll($, 'link[rel="stylesheet"]', url, 'href', callback);
-}
-
-function replaceJSFiles($, url, callback) {
-  log.debug('Calling replaceJSFiles handler');
-  replaceAll($, 'script', url, 'src', callback);
-}
-
 module.exports = {
-  mimetype: mimetype,
-  dataURI: dataURI,
-  replaceImages: replaceImages,
-  replaceCSSFiles: replaceCSSFiles,
-  replaceJSFiles: replaceJSFiles,
-
-  makeBundle: function (url, handlers, callback) {
-    log.info('Got request to bundle %s', url);
-    request(url, function (err, response, body) {
-      if (err) {
-        log.error('Could not fetch %s. Error: %s', url, err.message);
-        callback(err, response);
-      } else {
-        log.info('Beginning bundling process for %s', url);
-        replaceResources(url, body, handlers, callback);
-      }
-    });
-  }
+  helpers: helpers,
+  modifyRequest: requestModifiers,
+  resources: resources,
+  changeRequestBehavior: preResource,
+  modifyReplacements: postResource,
+  Bundler: Bundler
 };
+
