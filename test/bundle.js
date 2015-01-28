@@ -148,4 +148,85 @@ describe('bundler', function () {
     });
   });
 
+  // Test out the bundler itself
+
+  it('should call hooks before making the original request', function (done) {
+    var called = false;
+    (new bundler.Bundler('https://news.ycombinator.com'))
+    .beforeOriginalRequest(bundler.modifyRequests.stripHeaders(['Origin', 'Host']))
+    .beforeOriginalRequest(function (options, callback) {
+      should.exist(options);
+      options.should.have.property('headers');
+      options.headers.should.have.property('Origin');
+      options.headers['Origin'].should.be.empty;
+      options.headers.should.have.property('Host');
+      options.headers['Host'].should.be.empty;
+      called = true;
+      callback(null, options);
+    })
+    .useHandler(bundler.resources.replaceImages)
+    .send(function (err, bundle) {
+       should.not.exist(err);
+       should.exist(bundle);
+       should(called).be.ok;
+       done();
+    });
+  });
+
+  it('should call hooks before making each resource request', function (done) {
+    var called = false;
+    (new bundler.Bundler('https://news.ycombinator.com'))
+    .beforeFetchingResources(function (options, next, $, response) {
+      options.should.have.property('url');
+      called = true;
+      next(null, option);
+    })
+    .useHandler(bundler.resources.replaceImages)
+    .send(function (err, bundle) {
+      should.not.exist(err);
+      should.exist(bundle);
+      should(called).be.ok;
+      done();
+    });
+  });
+
+  it('should call hooks to inspect and modify diffs', function (done) {
+    var called = false;
+    (new bundler.Bundler('https://news.ycombinator.com'))
+    .useHandler(bundler.resources.replaceJSFiles)
+    .afterFetchingResources(function (diffs, callback) {
+      called = true;
+      callback(null, diffs);
+    })
+    .send(function (err, bundle) {
+      should.not.exist(err);
+      should.exist(bundle);
+      should(called).be.ok;
+      done();
+    });
+  });
+
+  it('should use only specified handlers', function (done) {
+    var calledHandler = false;
+    var calledDiffHandler = false;
+    (new bundler.Bundler('https://news.ycombinator.com'))
+    .useHandler(bundler.resources.replaceCSSFiles)
+    .useHandler(function ($, url, options, callback) {
+      calledHandler = true;
+      callback(null, {});
+    })
+    .afterFetchingResources(function (diffs, callback) {
+      calledDiffHandler = true;
+      should.exist(diffs);
+      diffs.should.have.property('news.css?zNb0mCdSh7C7CxzWOGA8');
+      diffs.should.not.have.property('y18.gif');
+    })
+    .send(function (err, bundle) {
+      should.not.exist(err);
+      should.exist(bundle);
+      should(calledHandler).be.ok;
+      should(calledDiffHandler).be.ok;
+      done();
+    });
+  });
 });
