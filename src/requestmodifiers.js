@@ -15,6 +15,9 @@ var log = require('./logger');
 module.exports = {
   stripHeaders: function (headers) {
     return function (options, callback) {
+      if (!options.hasOwnProperty('headers')) {
+        options.headers = {};
+      }
       for (var i = 0, len = headers.length; i < len; ++i) {
         options.headers[headers[i]] = '';
       }

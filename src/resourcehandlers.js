@@ -45,6 +45,7 @@ function fetchAndReplace(options, attr, elem, diff, url, callback) {
     return;
   }
   var resurl = urllib.resolve(url, resource);
+  options.url = resurl;
   request(options, function (err, response, body) {
     if (err) {
       // Here, the callback is actually the function that continues

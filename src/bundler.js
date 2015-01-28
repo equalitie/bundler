@@ -22,14 +22,15 @@ var log = require('./logger');
 
 var config = JSON.parse(fs.readFileSync(path.join('config', 'config.json')));
 
-var Bundler = function (url) {
+function Bundler(url) {
   this.url = url;
-  this.resourceHandlers = [];
-  this.preInitHooks = [];
-  this.preResourcesHooks = [];
-  this.postResourcesHooks = [];
+  this.resourceHandlers = new Array(); 
+  this.preInitHooks = new Array(); 
+  this.preResourcesHooks = new Array(); 
+  this.postResourcesHooks = new Array();
   this.callback = function () {};
-};
+  return this;
+}
 
 Bundler.prototype.useHandler = function (handler) {
   this.resourceHandlers.push(handler);
@@ -53,15 +54,18 @@ Bundler.prototype.afterFetchingResources = function (hook) {
 
 Bundler.prototype.send = function (callback) {
   this.callback = callback;
-  var initOptions = request.defaults({url: this.url});
+  var initOptions = { url: this.url };
+  var thisBundler = this;
   async.reduce(this.preInitHooks, initOptions, function (memo, hook, next) {
+    log.debug('in Bundler.send/async.reduce, memo =', memo);
     hook(memo, next);
   }, function (err, options) {
+    log.debug('in send, options = %j', options);
     if (err) {
       log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
       this.callback(err, null);
     } else {
-      makeBundle(this, options);
+      makeBundle(thisBundler, options);
     }
   });
 }
@@ -79,11 +83,12 @@ function makeBundle(bundler, options) {
 
 function replaceResources(bundler, response, body) {
   var $ = cheerio.load(body);
-  async.reduce(this.preResourcesHooks, {}, function (memo, hook, next) {
+  async.reduce(bundler.preResourcesHooks, {}, function (memo, hook, next) {
     // Call the hook with arguments in the same order that the request modifier hooks
     // expect them to come in so that they could be reused here just as well.
-    hook(memo, hook, $, response);
+    hook(memo, next, $, response);
   }, function (err, options) {
+    log.debug('in replaceResources/async.reduce, options = %j', options);
     if (err) {
       log.error('Error calling pre-resource-handler hooks; Error: %s', err.message);
       bundler.callback(err, null);
@@ -98,6 +103,7 @@ function invokeHandlers(bundler, $, options) {
   for (var i = 0, len = bundler.resourceHandlers.length; i < len; ++i) {
     handlers.push(function (index) {
       return function (asynccb) {
+        log.debug('Before calling handler, options = %j', options);
         bundler.resourceHandlers[index]($, bundler.url, options, asynccb);
       };
     }(i));
@@ -108,20 +114,23 @@ function invokeHandlers(bundler, $, options) {
       bundler.callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
-      log.info('Got bundle for %s', bundler.url);
+      log.info('Got diffs for %s', bundler.url);
+      log.log('debug', 'allDiffs = %j', allDiffs);
       handleDiffs(bundler, $.html(), allDiffs);
     }
   });
 }
 
 function handleDiffs(bundler, html, diffs) {
+  log.debug('Called handleDiffs to replace resource URLs with data URIs.');
   async.reduce(bundler.postResourcesHooks, diffs, function (memo, hook, next) {
-    hook(diffs, next);
+    hook(memo, next);
   }, function (err, newDiffs) {
     if (err) {
       log.error('Error calling post-resources hooks; Error: %s', err.message);
       bundler.callback(err, null);
     } else {
+      log.info('Applying diffs to HTML.');
       html = applyDiffs(html, newDiffs);
       bundler.callback(null, html);
     }
@@ -151,6 +160,5 @@ module.exports = {
   resources: resources,
   changeRequestBehavior: beforeResource,
   modifyReplacements: postResource,
-  Bundler: Bundler
+  makeBundler: Bundler
 };
-
