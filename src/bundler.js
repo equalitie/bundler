@@ -13,50 +13,48 @@ var cheerio = require('cheerio');
 var urllib = require('url');
 var path = require('path');
 var fs = require('fs');
-var requestModifiers = require('./requestmodifiers');
-var resources = require('./resourcehandlers');
-var beforeResource = require('./preresourcehooks');
-var postResource = require('./postresourcehooks');
+var requests = require('./requests');
+var handlers = require('./handlers');
+var resources = require('./resources');
+var diffs = require('./diffs');
 var helpers = require('./helpers');
 var log = require('./logger');
-
-var config = JSON.parse(fs.readFileSync(path.join('config', 'config.json')));
 
 function Bundler(url) {
   this.url = url;
   this.resourceHandlers = new Array(); 
-  this.preInitHooks = new Array(); 
-  this.preResourcesHooks = new Array(); 
-  this.postResourcesHooks = new Array();
+  this.originalRequestHooks = new Array(); 
+  this.resourceRequestHooks = new Array(); 
+  this.diffHooks = new Array();
   this.callback = function () {};
   return this;
 }
 
-Bundler.prototype.useHandler = function (handler) {
-  this.resourceHandlers.push(handler);
+Bundler.prototype.on = function (hookname, handler) {
+  switch (hookname) {
+  case 'originalRequest':
+    this.originalRequestHooks.push(handler);
+    break;
+  case 'originalReceived':
+    this.resourceHandlers.push(handler);
+    break;
+  case 'resourceRequest':
+    this.resourceRequestHooks.push(handler);
+    break;
+  case 'diffsReceived':
+    this.diffHooks.push(handler);
+    break;
+  default:
+    log.error('No hook with the name %s exists.', hookname);
+  }
   return this;
 };
 
-Bundler.prototype.beforeOriginalRequest = function (hook) {
-  this.preInitHooks.push(hook);
-  return this;
-};
-
-Bundler.prototype.beforeFetchingResources = function (hook) {
-  this.preResourcesHooks.push(hook);
-  return this;
-};
-
-Bundler.prototype.afterFetchingResources = function (hook) {
-  this.postResourcesHooks.push(hook);
-  return this;
-};
-
-Bundler.prototype.send = function (callback) {
+Bundler.prototype.bundle = function (callback) {
   this.callback = callback;
   var initOptions = { url: this.url };
   var thisBundler = this;
-  async.reduce(this.preInitHooks, initOptions, function (memo, hook, next) {
+  async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
     log.debug('in Bundler.send/async.reduce, memo =', memo);
     hook(memo, next);
   }, function (err, options) {
@@ -83,7 +81,7 @@ function makeBundle(bundler, options) {
 
 function replaceResources(bundler, response, body) {
   var $ = cheerio.load(body);
-  async.reduce(bundler.preResourcesHooks, {}, function (memo, hook, next) {
+  async.reduce(bundler.resourceRequestHooks, {}, function (memo, hook, next) {
     // Call the hook with arguments in the same order that the request modifier hooks
     // expect them to come in so that they could be reused here just as well.
     hook(memo, next, $, response);
@@ -123,7 +121,7 @@ function invokeHandlers(bundler, $, options) {
 
 function handleDiffs(bundler, html, diffs) {
   log.debug('Called handleDiffs to replace resource URLs with data URIs.');
-  async.reduce(bundler.postResourcesHooks, diffs, function (memo, hook, next) {
+  async.reduce(bundler.diffHooks, diffs, function (memo, hook, next) {
     hook(memo, next);
   }, function (err, newDiffs) {
     if (err) {
@@ -155,10 +153,11 @@ function applyDiffs(string, diffs) {
 }
 
 module.exports = {
-  helpers: helpers,
-  modifyRequests: requestModifiers,
-  resources: resources,
-  changeRequestBehavior: beforeResource,
-  modifyReplacements: postResource,
-  makeBundler: Bundler
+  Bundler: Bundler
 };
+
+_.extend(module.exports, helpers);
+_.extend(module.exports, requests);
+_.extend(module.exports, handlers);
+_.extend(module.exports, resources);
+_.extend(module.exports, diffs);
