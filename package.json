@@ -6,7 +6,7 @@
   "author": "Zack Mullaly <redwire@riseup.net>",
   "main": "./src/bundler.js",
   "scripts": {
-    "test": "mocha -t 20000 test/bundle.js"
+    "test": "mocha -t 20000 test/*.js"
   },
   "dependencies": {
     "winston": "latest",

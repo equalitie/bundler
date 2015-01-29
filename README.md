@@ -265,6 +265,8 @@ following helper functions:
 
 ## Examples
 
+### helpers.mimetype
+
 ```javascript
 bundler.helpers.mimetype('/stylesheets/hello.css?hello=world');
 // -> 'text/css'
@@ -272,6 +274,8 @@ bundler.helpers.mimetype('/stylesheets/hello.css?hello=world');
 bundler.helpers.mimetype('image.png');
 // -> 'image/png'
 ```
+
+### helpers.dataURI
 
 ```javascript
 bundler.helpers.dataURI('test.css', new Buffer('h1 {  color: red; }'));
