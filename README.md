@@ -116,6 +116,171 @@ on `google.com`:
   });
 ```
 
+# Writing your own hooks
+
+It is, of course, possible to write your own hooks to use in any of the cases outlined
+above. Each type of hook has a different signature but are expected to behave in
+approximately the same ways.
+
+## Before fetching the original document
+
+Hooks to be added to the Bundler object using the `beforeOriginalRequest` method
+should have the following form:
+
+```javascript
+function handlerName(options, callback) {
+  // Do something with options
+  callback(err, options);
+}
+```
+
+The `callback` provided is used to iterate through hooks, and so must be called
+with any error that might occur (or `null` otherwise) and the modified `options`
+object.
+
+The `options` object is the object passed to the [request](https://github.com/request/request)
+library as the first argument to `request` as seen in the library's
+[Custom HTTP Headers](https://github.com/request/request#custom-http-headers)
+documentation.
+
+For example, we could register the following hook to increment a global count of the total
+number of bundle requests the server has received.
+
+```javascript
+(new bundler.makeBundler(url))
+  .useHandler(bundler.resources.replaceImages)
+  .beforeOriginalRequest(function (options, callback) {
+    bundleRequests++;
+    callback(null, options);
+  })
+  .send(function (err, bundle) {
+    console.log(bundle);
+  });
+```
+
+## Before fetching each resource
+
+Hooks to be added to the Bundler object using the `beforeFetchingResources` method
+should have the following form:
+
+```javascript```
+function handlerName(options, callback, $, response) {
+  // Do something with options
+  callback(err, options);
+}
+```
+
+You will notice that this form is very similar to that of the handler described above.
+This is intentional.  The signature for these handlers is a little unusual looking
+(having the `callback` before `$` and `response` arguments), however this is done so
+that the same handlers written for `beforeOriginalRequest` can be reused here.
+
+The `options` and `callback` arguments here are the same as they are for the
+`beforeOriginalRequest` handlers.
+
+The `$` argument here is a [Cheerio](https://github.com/cheeriojs/cheerio#cheerio--)
+object loaded with the contents of the original document. It can be used in any way
+the library allows.
+
+The `response` argument is the response object provided by the call to `request` 
+for the original document, which is an instance of
+[http.IncomingMessage](http://nodejs.org/api/http.html#http_http_incomingmessage).
+This may be useful for obtaining response headers or the status code.
+
+For example, you could set the Referer header of the resource request to the
+value of the Host header in the response.
+
+```javascript
+(new bundler.makeBundler(url))
+  .useHandler(bundler.resources.replaceImages)
+  .beforeFetchingResources(function (options, callback, $, response) {
+    if (!options.hasOwnProperty('headers')) {
+      options.headers = {};
+    }
+    options.headers['Referer'] = response.headers['host'];
+    callback(null, options);
+  })
+  .send(function (err, bundle) {
+    console.log(bundle);
+  });
+```
+
+## After building data URIs
+
+Hooks to be added to the Bundler object using the `afterFetchingResources` method
+should have the following form.
+
+```javascript
+function handlerName(diffs, callback) {
+  // Do something with diffs
+  callback(err, diffs);
+}
+```
+
+Here, `diffs` is an object whose keys are resource URLs and whose values are data
+URIs.
+
+One could write a handler to count the number of images, CSS files, and JS files
+having replacements made with the following hook.
+
+```javascript
+var cssReplaces = 0;
+var jsReplaces = 0;
+var imgReplaces = 0;
+
+(new bundler.makeBundler(url))
+  .useHandler(bundler.resources.replaceImages)
+  .useHandler(bundler.resources.replaceCSSFiles)
+  .useHandler(bundler.resources.replaceJSFiles)
+  .afterFetchingResources(function (diffs, callback) {
+    var sources = Object.keys(diffs);
+    for (var i = 0, len = sources.length; i < len; ++i) {
+      switch (bundler.helpers.mimetype(sources[i])) {
+      case 'text/css':
+        cssReplaces++;
+        break;
+      case 'application/javascript':
+        jsReplaces++;
+        break;
+      default:
+        imgReplaces++;
+      }
+    }
+  })
+  .send(function (err, bundle) {
+    console.log(bundle);
+    console.log(cssReplaces + '\t CSS files replaced');
+    console.log(jsReplaces + '\t JS files replaced');
+    console.log(imgReplaces + '\t image files replaced');
+  });
+```
+
+# Helper functions
+
+To make writing handlers and hooks a little bit easier, Bundler exports the
+following helper functions:
+
+* `bundler.helpers.mimetype` returns the mimetype of a resource given its URL.
+* `bundler.helpers.dataURI` returns the data URI for a resource given its URL and content in a buffer.
+
+## Examples
+
+```javascript
+bundler.helpers.mimetype('/stylesheets/hello.css?hello=world');
+// -> 'text/css'
+
+bundler.helpers.mimetype('image.png');
+// -> 'image/png'
+```
+
+```javascript
+bundler.helpers.dataURI('test.css', new Buffer('h1 {  color: red; }'));
+// -> 'data:text/css;base64,aDEgeyAgY29sb3I6IHJlZDsgfQ=='
+
+bundler.helpers.dataURI('https://site.com/awesome/code.js', new Buffer('alert("Hello world");'));
+// -> 'data:application/javascript;base64,YWxlcnQoIkhlbGxvIHdvcmxkIik7'
+```
+
 # Testing
 
 To run the module test script, simply run the command
