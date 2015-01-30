@@ -71,14 +71,14 @@ For example, to replace the `Referer` header with `https://duckduckgo.com`:
 var bundleMaker = new bundler.Bundler('https://yahoo.com');
 
 bundleMaker.on('originalRequest', bundler.spoofHeaders({
-    'Referer': 'https://duckduckgo.com'
+  'Referer': 'https://duckduckgo.com'
 }));
 
 bundleMaker.on('originalReceived', bundler.replaceImages);
 bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
 
 bundleMaker.bundle(function (err, bundle) {
-    console.log(bundle);
+  console.log(bundle);
 });
 ```
 
@@ -176,6 +176,8 @@ For example, we could register the following hook to increment a global count of
 number of bundle requests the server has received.
 
 ```javascript
+var bundlerCalls = 0;
+
 var bundleMaker = new bundler.Bundler(url);
 
 bundleMaker.on('originalReceived', bundler.replaceImages);
@@ -195,7 +197,7 @@ bundleMaker.bundle(function (err, bundle) {
 Hooks to be added to the Bundler object using the `resourceRequest` event 
 should have the following form:
 
-```javascript```
+```javascript
 function handlerName(options, callback, $, response) {
   // Do something with options
   callback(err, options);
@@ -205,7 +207,7 @@ function handlerName(options, callback, $, response) {
 You will notice that this form is very similar to that of the handler described above.
 This is intentional.  The signature for these handlers is a little unusual looking
 (having the `callback` before `$` and `response` arguments), however this is done so
-that the same handlers written for `beforeOriginalRequest` can be reused here.
+that the same handlers written for `originalRequest` can be reused here.
 
 The `options` and `callback` arguments here are the same as they are for the
 `originalRequest` handlers.
