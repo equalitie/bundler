@@ -20,14 +20,16 @@ fetch [Hacker News](https://news.ycombinator.com)'s main page and bundle the
 images on the site into the HTML.
 
 ```javascript
-(new bundler.makeBundler('https://news.ycombinator.com'))
-  .useHandler(bundler.resources.replaceImages)
-  .send(function (err, bundle) {
-    console.log(bundle); 
-  });
+var bundleMaker = new bundler.Bundler('https://news.ycombinator.com');
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(bundle);
+});
 ```
 
-Currently, there are three resource handlers in `bundler.resources`:
+Currently, there are three resource handlers exported in the bundler module:
 
 1. replaceImages
 2. replaceCSSFiles
@@ -38,6 +40,14 @@ which all do exactly what you would expect.
 More on writing your own resource handlers in the *Writing Your Own Hooks*
 section below.
 
+# Terminology
+
+A `diff` is an object whose key is a resource URL and whose value is a data URI.
+
+A `handler` is a function that analyzes a web page to produce diffs.
+
+A `hook` is a function that can manipulate request option data or diffs.
+
 # Using Hooks
 
 ![Architectural diagram](https://raw.githubusercontent.com/equalitie/bundler/master/architecture.png)
@@ -45,9 +55,11 @@ section below.
 Bundler provides three opportunities to inject new functionality into the
 bundling process.
 
-1. Before fetching the first, original document
-2. Before fetching any resource referenced by the original document
-3. After accumulating a collection of resource URLs and their data URIs
+1. `originalRequest` - Before fetching the first, original document
+2. `resourceRequest` - Before fetching any resource referenced by the original document
+3. `diffsReceived`   - After accumulating a collection of resource URLs and their data URIs
+
+As seen above, you can register handlers using the `originalReceived` event.
 
 ## Before fetching the original document
 
@@ -56,21 +68,31 @@ allows for hooks to be called before making a request for the original document.
 For example, to replace the `Referer` header with `https://duckduckgo.com`:
 
 ```javascript
-(new bundler.makeBundler('https://yahoo.com'))
-  .useHandler(bundler.resources.replaceImages)
-  .useHandler(bundler.resources.replaceCSSFiles)
-  .beforeOriginalRequest(bundler.modifyRequests.spoofHeaders({
+var bundleMaker = new bundler.Bundler('https://yahoo.com');
+
+bundleMaker.on('originalRequest', bundler.spoofHeaders({
     'Referer': 'https://duckduckgo.com'
-  }))
-  .send(function (err, bundle) {
+}));
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+
+bundleMaker.bundle(function (err, bundle) {
     console.log(bundle);
-  });
+});
 ```
 
-Currently, the `bundler.modifyRequests` includes:
+Currently, two request modifiers are exported.
 
-1. stripHeaders([header1, header2, ...])
-2. spoofHeaders({header1: replacement1, header2: replacement2, ...})
+### stripHeaders
+
+`stripHeaders` accepts an array of header names to replace with blank values in the
+request object and returns the hook function that `Bundler.on` expects.
+
+### spoofHeaders
+
+`spoofHeaders` accepts an object mapping header names to the value to insert in
+their place and returns the hook function that `Bundler.on` expects.
 
 ## Before fetching each resource
 
@@ -78,42 +100,49 @@ Bundler allows request options to be set for each resource that is to be retriev
 The functions from `bundler.modifyRequests` can be reused here.  For example:
 
 ```javascript
-(new bundler.makeBundler('https://yahoo.com'))
-  .useHandler(bundler.resources.replaceImages)
-  .useHandler(bundler.resources.replaceCSSFiles)
-  .beforeFetchingResources(bundler.modifyRequests.spoofHeaders({
-    'Referer': 'https://duckduckgo.com'
-  }))
-  .send(function (err, bundle) {
-    console.log(bundle);
-  });
+var bundleMaker = new bundler.Bundler('https://yahoo.com');
+
+bundleMaker.on('resourceRequest', bundler.spoofHeaders({
+  'Referer': 'https://duckduckgo.com'
+}));
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(bundle);
+});
 ```
 
 Note that the only difference between this example and the one in the first section
-is that this one registers hooks with the `beforeFetchingResources` method.
+is that this one registers hooks for the `resourceRequest` method. You can reuse
+handlers written for `originalRequest` here.
 
-*Currently no special handlers are implemented here*
+**Currently no special handlers are implemented here**
 
 ## After building data URIs
 
 In case one would like to prevent bundler from making certain kinds of replacements,
 for example if a data URI is too long or the resource is hosted on a particular site,
-one can register hooks to be run when a collection of resource URLs and their
-corresponding data URIs has been compiled. 
+one can register hooks to be run when the collection of diffs has been compiled.
 
-Currently, `bundler.modifyReplacements.filter` is the only existing hook exported
+Currently, `bundler.filterDiffs` is the only existing hook exported
 for this purpose. An example of filtering out resources that appear to be hosted
 on `google.com`:
 
 ```javascript
-(new bundler.makeBundler(url))
-  .useHandler(bundler.resources.replaceJSFiles)
-  .afterFetchingResources(bundler.modifyReplacements.filter(function (resource, datauri) {
-    return resource.indexOf('google.com') < 0;
-  }))
-  .send(function (err, bundle) {
-    console.log(bundle);
-  });
+var bundleMaker = new bundler.Bundler(url);
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+
+bundleMaker.on('diffsReceived', bundler.filterDiffs(function (src, dest) {
+  return src.indexOf('google.com') < 0;
+}));
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(bundle);
+});
 ```
 
 # Writing your own hooks
@@ -124,7 +153,7 @@ approximately the same ways.
 
 ## Before fetching the original document
 
-Hooks to be added to the Bundler object using the `beforeOriginalRequest` method
+Hooks to be added to the Bundler object using the `originalRequest` event 
 should have the following form:
 
 ```javascript
@@ -147,20 +176,23 @@ For example, we could register the following hook to increment a global count of
 number of bundle requests the server has received.
 
 ```javascript
-(new bundler.makeBundler(url))
-  .useHandler(bundler.resources.replaceImages)
-  .beforeOriginalRequest(function (options, callback) {
-    bundleRequests++;
-    callback(null, options);
-  })
-  .send(function (err, bundle) {
-    console.log(bundle);
-  });
+var bundleMaker = new bundler.Bundler(url);
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+
+bundleMaker.on('originalRequest', function (options, callback) {
+  bundlerCalls++;
+  callback(null, options);
+});
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(bundle);
+});
 ```
 
 ## Before fetching each resource
 
-Hooks to be added to the Bundler object using the `beforeFetchingResources` method
+Hooks to be added to the Bundler object using the `resourceRequest` event 
 should have the following form:
 
 ```javascript```
@@ -176,7 +208,7 @@ This is intentional.  The signature for these handlers is a little unusual looki
 that the same handlers written for `beforeOriginalRequest` can be reused here.
 
 The `options` and `callback` arguments here are the same as they are for the
-`beforeOriginalRequest` handlers.
+`originalRequest` handlers.
 
 The `$` argument here is a [Cheerio](https://github.com/cheeriojs/cheerio#cheerio--)
 object loaded with the contents of the original document. It can be used in any way
@@ -191,23 +223,26 @@ For example, you could set the Referer header of the resource request to the
 value of the Host header in the response.
 
 ```javascript
-(new bundler.makeBundler(url))
-  .useHandler(bundler.resources.replaceImages)
-  .beforeFetchingResources(function (options, callback, $, response) {
-    if (!options.hasOwnProperty('headers')) {
-      options.headers = {};
-    }
-    options.headers['Referer'] = response.headers['host'];
-    callback(null, options);
-  })
-  .send(function (err, bundle) {
-    console.log(bundle);
-  });
+var bundleMaker = new bundler.Bundler(url);
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+
+bundleMaker.on('resourceRequest', function (options, callback, $, response) {
+  if (!options.hasOwnProperty('headers')) {
+    options.headers = {};
+  }
+  options.headers['Referer'] = response.headers['host'];
+  callback(null, options);
+});
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(bundle);
+});
 ```
 
 ## After building data URIs
 
-Hooks to be added to the Bundler object using the `afterFetchingResources` method
+Hooks to be added to the Bundler object using the `diffsReceived` event 
 should have the following form.
 
 ```javascript
@@ -217,9 +252,6 @@ function handlerName(diffs, callback) {
 }
 ```
 
-Here, `diffs` is an object whose keys are resource URLs and whose values are data
-URIs.
-
 One could write a handler to count the number of images, CSS files, and JS files
 having replacements made with the following hook.
 
@@ -228,60 +260,58 @@ var cssReplaces = 0;
 var jsReplaces = 0;
 var imgReplaces = 0;
 
-(new bundler.makeBundler(url))
-  .useHandler(bundler.resources.replaceImages)
-  .useHandler(bundler.resources.replaceCSSFiles)
-  .useHandler(bundler.resources.replaceJSFiles)
-  .afterFetchingResources(function (diffs, callback) {
-    var sources = Object.keys(diffs);
-    for (var i = 0, len = sources.length; i < len; ++i) {
-      switch (bundler.helpers.mimetype(sources[i])) {
-      case 'text/css':
-        cssReplaces++;
-        break;
-      case 'application/javascript':
-        jsReplaces++;
-        break;
-      default:
-        imgReplaces++;
-      }
+var bundleMaker = new bundler.Bundler(url);
+
+bundleMaker.on('originalReceived', bundler.replaceImages);
+bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+bundleMaker.on('originalReceived', bundler.replaceJSFiles);
+
+bundleMaker.on('diffsReceived', function (diffs, callback) {
+  var sources = Object.keys(diffs);
+  for (var i = 0, len = sources.length; i < len; ++i) {
+    switch (bundler.mimetype(sources[i])) {
+    case 'text/css':
+      cssReplaces++;
+      break;
+    case 'application/javascript':
+      jsReplaces++;
+      break;
+    default:
+      imgReplaces++;
     }
-  })
-  .send(function (err, bundle) {
-    console.log(bundle);
-    console.log(cssReplaces + '\t CSS files replaced');
-    console.log(jsReplaces + '\t JS files replaced');
-    console.log(imgReplaces + '\t image files replaced');
-  });
+  }
+  callback(null, diffs);
+});
+
+bundleMaker.bundle(function (err, bundle) {
+  console.log(cssReplaces + '\t CSS files replaced.');
+  console.log(jsReplaces + '\t JS files replaced.');
+  console.log(imgReplaces + '\t Image files replaced.');
+});
 ```
 
 # Helper functions
 
 To make writing handlers and hooks a little bit easier, Bundler exports the
-following helper functions:
+following functions.
 
-* `bundler.helpers.mimetype` returns the mimetype of a resource given its URL.
-* `bundler.helpers.dataURI` returns the data URI for a resource given its URL and content in a buffer.
-
-## Examples
-
-### helpers.mimetype
+## bundler.mimetype
 
 ```javascript
-bundler.helpers.mimetype('/stylesheets/hello.css?hello=world');
+bundler.mimetype('/stylesheets/hello.css?hello=world');
 // -> 'text/css'
 
-bundler.helpers.mimetype('image.png');
+bundler.mimetype('image.png');
 // -> 'image/png'
 ```
 
-### helpers.dataURI
+## bundler.dataURI
 
 ```javascript
-bundler.helpers.dataURI('test.css', new Buffer('h1 {  color: red; }'));
+bundler.dataURI('test.css', new Buffer('h1 {  color: red; }'));
 // -> 'data:text/css;base64,aDEgeyAgY29sb3I6IHJlZDsgfQ=='
 
-bundler.helpers.dataURI('https://site.com/awesome/code.js', new Buffer('alert("Hello world");'));
+bundler.dataURI('https://site.com/awesome/code.js', new Buffer('alert("Hello world");'));
 // -> 'data:application/javascript;base64,YWxlcnQoIkhlbGxvIHdvcmxkIik7'
 ```
 
