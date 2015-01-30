@@ -10,7 +10,7 @@ module.exports = {
   // Filter out replacements that we might not want to apply.
   // First argument to predicate is the resource's original URL.
   // Second argument is the generated data URI.
-  filterReplacements: function (predicate) {
+  filterDiffs: function (predicate) {
     return function (diffs, callback) {
       var newDiffs = {};
       var sources = Object.keys(diffs);

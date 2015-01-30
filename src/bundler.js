@@ -81,6 +81,7 @@ function makeBundle(bundler, options) {
 
 function replaceResources(bundler, response, body) {
   var $ = cheerio.load(body);
+  log.debug('Loaded cheerio object');
   async.reduce(bundler.resourceRequestHooks, {}, function (memo, hook, next) {
     // Call the hook with arguments in the same order that the request modifier hooks
     // expect them to come in so that they could be reused here just as well.
@@ -113,7 +114,6 @@ function invokeHandlers(bundler, $, options) {
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
       log.info('Got diffs for %s', bundler.url);
-      log.log('debug', 'allDiffs = %j', allDiffs);
       handleDiffs(bundler, $.html(), allDiffs);
     }
   });
