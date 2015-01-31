@@ -82,7 +82,7 @@ bundleMaker.bundle(function (err, bundle) {
 });
 ```
 
-Currently, two request modifiers are exported.
+Currently, three request modifiers are exported.
 
 ### stripHeaders
 
@@ -93,6 +93,13 @@ request object and returns the hook function that `Bundler.on` expects.
 
 `spoofHeaders` accepts an object mapping header names to the value to insert in
 their place and returns the hook function that `Bundler.on` expects.
+
+### proxyTo
+
+`proxyTo` accepts a URL that requests will be configured to use as a proxy.
+See [request's documentation on proxies](https://github.com/request/request#proxies)
+to understand how that works.  The function accepts the URL and returns the handler
+function that `Bundler.on` expects.
 
 ## Before fetching each resource
 
