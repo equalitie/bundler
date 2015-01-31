@@ -9,6 +9,14 @@ var portNumber = 9008;
 
 var config = JSON.parse(fs.readFileSync('./psconfig.json'));
 
+function extractHeaders(req, headers) {
+	var newHeaders = {};
+	for (var i = 0, len = headers.length; i < len; ++i) {
+		newHeaders[headers[i]] = req.headers[i];
+	}
+	return newHeaders;
+}
+
 function handleRequests(req, res) {
 	var bundleMaker = new bundler.Bundler(req.url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
@@ -19,6 +27,13 @@ function handleRequests(req, res) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
 		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
 	}
+
+	// Clone some headers from the incoming request to go into the original request.
+	bundleMaker.on('originalRequest', bundler.spoofHeaders(extractHeaders(req, config.cloneHeaders)));
+
+	// Spoof certain headers on every request.
+	bundleMaker.on('originalRequest', bundler.spoofHeaders(config.spoofHeaders));
+	bundleMaker.on('resourceRequest', bundler.spoofHeaders(config.spoofHeaders));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
