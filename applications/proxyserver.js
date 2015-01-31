@@ -12,7 +12,7 @@ var config = JSON.parse(fs.readFileSync('./psconfig.json'));
 function extractHeaders(req, headers) {
 	var newHeaders = {};
 	for (var i = 0, len = headers.length; i < len; ++i) {
-		newHeaders[headers[i]] = req.headers[i];
+		newHeaders[headers[i]] = req.headers[headers[i]];
 	}
 	return newHeaders;
 }
@@ -34,6 +34,9 @@ function handleRequests(req, res) {
 	// Spoof certain headers on every request.
 	bundleMaker.on('originalRequest', bundler.spoofHeaders(config.spoofHeaders));
 	bundleMaker.on('resourceRequest', bundler.spoofHeaders(config.spoofHeaders));
+
+	bundleMaker.on('originalRequest', bundler.followRedirects(
+		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {

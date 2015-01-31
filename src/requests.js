@@ -40,5 +40,13 @@ module.exports = {
       options.proxy = url;
       callback(null, options);
     };
-  }
+  },
+
+  followRedirects: function (first, all, limit) {
+    return function (options, callback) {
+      options.followRedirect = first;
+      options.followAllRedirects = all;
+      options.maxRedirects = limit;
+    };
+  },
 };

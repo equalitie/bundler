@@ -22,7 +22,4 @@
  * need more or different data, such as a request object to manipulate.
  */
 module.exports = {
-  handleRedirect: function (options, next, $, response) {
-    next(null, options);
-  }
 };
