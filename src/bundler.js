@@ -82,7 +82,7 @@ function makeBundle(bundler, options) {
 function replaceResources(bundler, response, body) {
   var $ = cheerio.load(body);
   log.debug('Loaded cheerio object');
-  async.reduce(bundler.resourceRequestHooks, {}, function (memo, hook, next) {
+  async.reduce(bundler.resourceRequestHooks, {url: bundler.url}, function (memo, hook, next) {
     // Call the hook with arguments in the same order that the request modifier hooks
     // expect them to come in so that they could be reused here just as well.
     hook(memo, next, $, response);

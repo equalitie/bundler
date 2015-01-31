@@ -47,6 +47,7 @@ module.exports = {
       options.followRedirect = first;
       options.followAllRedirects = all;
       options.maxRedirects = limit;
+      callback(null, options);
     };
   },
 };
