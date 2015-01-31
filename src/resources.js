@@ -22,10 +22,6 @@
  * need more or different data, such as a request object to manipulate.
  */
 module.exports = {
-  proxyRequest: function (options, next, $, response) {
-    next(null, options);
-  },
-
   handleRedirect: function (options, next, $, response) {
     next(null, options);
   }

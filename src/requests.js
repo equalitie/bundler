@@ -33,5 +33,12 @@ module.exports = {
       _.extend(options.headers, spoofs);
       callback(null, options);
     };
+  },
+
+  proxyTo: function (url) {
+    return function (options, callback) {
+      options.proxy = url;
+      callback(null, options);
+    };
   }
 };

@@ -2,16 +2,24 @@
  * to bundle requests for pages that are requested in the browser.
  */
 var http = require('http');
-var urllib = require('url');
+var fs = require('fs');
 var bundler = require('../src/bundler');
 
 var portNumber = 9008;
+
+var config = JSON.parse(fs.readFileSync('./psconfig.json'));
 
 function handleRequests(req, res) {
 	var bundleMaker = new bundler.Bundler(req.url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+
+	if (config.useProxy) {
+		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
+		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
+	}
+
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
 			console.log('Failed to create bundle for ' + req.url);
