@@ -52,12 +52,13 @@ A `hook` is a function that can manipulate request option data or diffs.
 
 ![Architectural diagram](https://raw.githubusercontent.com/equalitie/bundler/master/architecture.png)
 
-Bundler provides three opportunities to inject new functionality into the
+Bundler provides four opportunities to inject new functionality into the
 bundling process.
 
-1. `originalRequest` - Before fetching the first, original document
-2. `resourceRequest` - Before fetching any resource referenced by the original document
-3. `diffsReceived`   - After accumulating a collection of resource URLs and their data URIs
+1. `originalRequest`  - Before fetching the first, original document
+2. `originalReceived` - Specify handlers used to scan the document and produce diffs 
+3. `resourceRequest`  - Before fetching any resource referenced by the original document
+4. `diffsReceived`    - After accumulating a collection of resource URLs and their data URIs
 
 As seen above, you can register handlers using the `originalReceived` event.
 
@@ -111,6 +112,19 @@ function that `Bundler.on` expects.
 
 See [request's option documentation](https://github.com/request/request#requestoptions-callback)
 to learn more about what request defaults to.
+
+## Handling resources
+
+Resource handlers are used to extract references to resources in a document, such as those in script tags, link tags, and so on.
+They are responsible for producing diff objects that bundler will go on to
+use to replace references to such resources with data-URIs.
+
+As mentioned in the *Basic Usage* section, resource handlers are registered
+using the `originalReceived` event. Bundler currently exports the following handlers.
+
+1. replaceImages
+2. replaceCSSFiles
+3. replaceJSFiles
 
 ## Before fetching each resource
 
@@ -209,6 +223,37 @@ bundleMaker.bundle(function (err, bundle) {
   console.log(bundle);
 });
 ```
+
+## Handling resources
+
+Handlers for replacing resources in a document, like `bundler.replaceImages` can also be supplied to the bundler.  Such functions have the following form.
+
+```javascript
+function handlerName(request, $, url, callback) {
+  var element = $('some-selector');
+  request({url: element.attr('some-attr')}, function (err, response, body) {
+    // produce a diff object
+    var diff = { 'source-url': 'replacement' };
+    callback(errorIfAny, diff);
+  });
+}
+```
+
+The `request` parameter is a wrapper around the [request](https://github.com/request) function that will invoke all hooks inserted via `resourceRequest`
+to modify the `options` object before making the request. It accepts an  
+`options` parameter (or resource URL) and a callback to handle the response.
+
+The `$` parameter is the [Cheerio](https://github.com/cheeriojs/cheerio) object
+containing the document fetched by the original request.
+
+The `url` parameter is the URL originally requested, used to produce resolved
+paths to discovered resources.
+
+The `callback` parameter is used to iterate through a call to `async.reduce` and must be invoked with any error that occurs (or null) and the diff object
+created.
+
+Such handlers tend to become quite complicated quickly as multiple requests will need to be made for resources.  In the bundler library, `async.reduce` is
+used to build the diff object.
 
 ## Before fetching each resource
 
