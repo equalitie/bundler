@@ -3,6 +3,7 @@
  */
 var http = require('http');
 var fs = require('fs');
+var urllib = require('url');
 var bundler = require('../src/bundler');
 
 var portNumber = 9008;
@@ -16,6 +17,24 @@ function extractHeaders(req, headers) {
 	}
 	return newHeaders;
 }
+
+function reverseProxy(remapper) {
+  return function (options, next) {
+    var url = urllib.parse(options.url);
+    var hostname = url.hostname;
+    var resource = url.path;
+    if (!options.hasOwnProperty('headers')) {
+      options.headers = {};
+    }
+    if (remapper.hasOwnProperty(hostname)) {
+      options.url = urllib.resolve(remapper[hostname], resource);
+      options.headers['Host'] = hostname;
+    }
+    next(null, options);
+  };
+}
+
+var remapper = {};
 
 function handleRequests(req, res) {
 	var bundleMaker = new bundler.Bundler(req.url);
@@ -37,6 +56,8 @@ function handleRequests(req, res) {
 
 	bundleMaker.on('originalRequest', bundler.followRedirects(
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
+
+  bundleMaker.on('resourceRequest', reverseProxy(remapper));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
