@@ -101,6 +101,17 @@ See [request's documentation on proxies](https://github.com/request/request#prox
 to understand how that works.  The function accepts the URL and returns the handler
 function that `Bundler.on` expects.
 
+### followRedirects
+
+`followRedirects` confgures the redirect-handling options for the `request` object. It accepts:
+
+1. `first`: bool - Whether or not to follow the first redirect resulting from a request.
+2. `all`: bool - Whether or not to follow all redirects that might result from requests.
+3. `limit`: int - The maximum number of redirects to follow.
+
+See [request's option documentation](https://github.com/request/request#requestoptions-callback)
+to learn more about what request defaults to.
+
 ## Before fetching each resource
 
 Bundler allows request options to be set for each resource that is to be retrieved.
