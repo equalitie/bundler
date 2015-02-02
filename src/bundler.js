@@ -79,53 +79,35 @@ function makeBundle(bundler, options) {
   });
 }
 
-/* Successively wrap the handler functions into one composed handler that can be
- * invoked with one call before every resource request.
- */
-function composeResourceHooks(bundler, callback) {
-  var nop = function (options, callback) { callback(null, options); };
-  async.reduce(bundler.resourceRequestHooks, nop, function (memo, hook, next) {
-    next(null, function (options, callback) {
-      memo(options, hook);
-    });
-  }, function (err, composedHandler) {
-    if (err) {
-      log.error('Error composing resourceRequestHooks; Error: %s', err.message);
-      bundler.calback(err, null);
-    } else {
-      callback(composedHandler);
-    }
-  });
-}
-
 function replaceResources(bundler, response, body) {
   var $ = cheerio.load(body);
   log.debug('Loaded cheerio object');
-  composeResourceHooks(bundler, function (resourceRequestHandler) {
-    invokeHandlers(bundler, $, resourceRequestHandler);
-  });
-}
-
-function invokeHandlers(bundler, $, resourceRequestHandler) {
-  var handlers = [];
-  // Create a function to wrap `request` in a call to the composed resource
-  // handler that produces the options that go into the former.
-  var makeRequest = function (resource, callback) {
-    resourceRequestHandler({url: resource}, function (err, options) {
+  var makeRequest = function (opts, callback) {
+    if (typeof opts === 'string') {
+      opts = { url : opts };
+    }
+    async.reduce(bundler.resourceRequestHooks, opts, function (memo, hook, next) {
+      hook(memo, next);
+    }, function (err, options) {
       if (err) {
-        log.error('Failed to call resourceRequestHandler; Error: %s', err.message);
+        log.error('Failed to call a resource request hook. Error: %s', err.mesage);
         bundler.callback(err, null);
       } else {
         request(options, callback);
       }
     });
   };
+  invokeHandlers(bundler, $, makeRequest);
+}
+
+function invokeHandlers(bundler, $, requestFn) {
+  var handlers = [];
   for (var i = 0, len = bundler.resourceHandlers.length; i < len; ++i) {
     handlers.push(function (index) {
       return function (asynccb) {
         // Instead of passing once-computed options to be reused in each handler,
         // we use our new request function to compute new options every time.
-        bundler.resourceHandlers[index](makeRequest, $, bundler.url, asynccb);
+        bundler.resourceHandlers[index](requestFn, $, bundler.url, asynccb);
       };
     }(i));
   }

@@ -12,12 +12,11 @@
 
 var urllib = require('url');
 var async = require('async');
-var request = require('request');
 var _ = require('lodash');
 var log = require('./logger');
 var helpers = require('./helpers');
 
-function replaceAll(options, $, selector, url, attr, callback) {
+function replaceAll(request, $, selector, url, attr, callback) {
   var elements = [];
   $(selector).each(function (index, elem) {
     var $_this = $(this);
@@ -30,12 +29,12 @@ function replaceAll(options, $, selector, url, attr, callback) {
       // source or href to fetch, just skip it.
       next(null, memo);
     } else {
-      fetchAndReplace(options, attr, item, memo, url, next);
+      fetchAndReplace(request, attr, item, memo, url, next);
     }
   }, callback);
 }
 
-function fetchAndReplace(options, attr, elem, diff, url, callback) {
+function fetchAndReplace(request, attr, elem, diff, url, callback) {
   log.debug('options in fetchAndReplace = %j', options);
   var resource = elem.attr(attr);
   // For some reason top-level pages might make it here
@@ -45,7 +44,7 @@ function fetchAndReplace(options, attr, elem, diff, url, callback) {
     return;
   }
   var resurl = urllib.resolve(url, resource);
-  options.url = resurl;
+  var options = { url: resurl };
   request(options, function (err, response, body) {
     if (err) {
       // Here, the callback is actually the function that continues
@@ -68,18 +67,18 @@ function writeDiff(resource, resurl, source, diff, callback) {
 }
 
 module.exports = {
-  replaceImages: function ($, url, options, callback) {
+  replaceImages: function (request, $, url, callback) {
     log.debug('Calling replaceImages handler');
-    replaceAll(options, $, 'img', url, 'src', callback);
+    replaceAll(request, $, 'img', url, 'src', callback);
   },
 
-  replaceCSSFiles: function ($, url, options, callback) {
+  replaceCSSFiles: function (request, $, url, callback) {
     log.debug('Calling replaceCSSFiles handler');
-    replaceAll(options, $, 'link[rel="stylesheet"]', url, 'href', callback);
+    replaceAll(request, $, 'link[rel="stylesheet"]', url, 'href', callback);
   },
 
-  replaceJSFiles: function ($, url, options, callback) {
+  replaceJSFiles: function (request, $, url, callback) {
     log.debug('Calling replaceJSFiles handler');
-    replaceAll(options, $, 'script', url, 'src', callback);
+    replaceAll(request, $, 'script', url, 'src', callback);
   }
 };
