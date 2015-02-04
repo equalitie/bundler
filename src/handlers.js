@@ -63,7 +63,6 @@ function fetchAndReplace(request, attr, elem, url, callback) {
       var datauri = helpers.dataURI(resurl, source);
       var diff = {};
       diff[resource] = datauri;
-      log.debug('Computed data URI for resource %s', resource);
       callback(null, diff);
     }
   });

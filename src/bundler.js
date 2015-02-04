@@ -58,7 +58,6 @@ Bundler.prototype.bundle = function (callback) {
     log.debug('in Bundler.send/async.reduce, memo =', memo);
     hook(memo, next);
   }, function (err, options) {
-    log.debug('in send, options = %j', options);
     if (err) {
       log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
       this.callback(err, null);
@@ -125,7 +124,6 @@ function invokeHandlers(bundler, $, requestFn) {
 }
 
 function handleDiffs(bundler, html, diffs) {
-  log.debug('Called handleDiffs to replace resource URLs with data URIs.');
   async.reduce(bundler.diffHooks, diffs, function (memo, hook, next) {
     hook(memo, next);
   }, function (err, newDiffs) {
