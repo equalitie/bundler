@@ -4,12 +4,31 @@
 var http = require('http');
 var fs = require('fs');
 var urllib = require('url');
+var _ = require('lodash');
 var bundler = require('../src/bundler');
 
 var listenAddress = "127.0.0.1";
 var portNumber = 9008;
 
-var config = JSON.parse(fs.readFileSync('./psconfig.json'));
+var configFile = './psconfig.json';
+
+var config = {
+  // Proxy requests for documents and resources to another server
+  "useProxy": false,
+  "proxyAddress": "",
+  "followFirstRedirect": true,
+  "followAllRedirects": false,
+  "redirectLimit": 10,
+  // Headers to clone from the original request sent by the user.
+  // See http://nodejs.org/api/http.html#http_message_headers
+  "cloneHeaders": [
+  ],
+  // A mapping of headers to values to write for them in requests.
+  "spoofHeaders": {
+  }
+};
+
+_.extend(config, JSON.parse(fs.readFileSync(configFile)));
 
 function extractHeaders(req, headers) {
 	var newHeaders = {};
