@@ -1,0 +1,14 @@
+{
+	"useProxy": false,
+	"proxyAddress": "localhost:9008",
+	"followFirstRedirect": true,
+	"followAllRedirects": false,
+	"redirectLimit": 10,
+	"cloneHeaders": [
+		"referer",
+		"cookie"
+	],
+	"spoofHeaders": {
+		"Origin": "Bundler"
+	}
+}
