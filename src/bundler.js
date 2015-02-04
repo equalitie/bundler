@@ -118,6 +118,7 @@ function invokeHandlers(bundler, $, requestFn) {
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
       log.info('Got diffs for %s', bundler.url);
+      log.debug(Object.keys(diffs)[0]);
       handleDiffs(bundler, $.html(), allDiffs);
     }
   });

@@ -17,25 +17,33 @@ var log = require('./logger');
 var helpers = require('./helpers');
 
 function replaceAll(request, $, selector, url, attr, callback) {
-  var elements = [];
+  // Prepare functions for parallel invokation.
+  var elementHandlers = [];
   $(selector).each(function (index, elem) {
     var $_this = $(this);
-    elements.push($_this);
-  });
-  log.info('Found %d resources in %s with selector %s', elements.length, url, selector);
-  async.reduce(elements, {}, function (memo, item, next) {
-    if (typeof item.attr(attr) === 'undefined') {
-      // In the case that we get something like a <script> tag with no
-      // source or href to fetch, just skip it.
-      next(null, memo);
-    } else {
-      fetchAndReplace(request, attr, item, memo, url, next);
+    if (typeof $_this.attr(attr) !== 'undefined') {
+      elementHandlers.push(function (item) {
+        return function (asynccallback) {
+          fetchAndReplace(request, attr, item, url, asynccallback);
+        };
+      }($_this));
     }
-  }, callback);
+  });
+  log.info('Found %d resources in %s with selector %s', elementHandlers.length, url, selector);
+  async.parallel(elementHandlers, function (err, diffs) {
+    if (err) {
+      callback(err, {});
+    } else {
+      var allDiffs = {};
+      for (var i = 0, len = diffs.length; i < len; ++i) {
+        allDiffs = _.extend(allDiffs, diffs[i]);
+      }
+      callback(null, allDiffs);
+    }
+  });
 }
 
-function fetchAndReplace(request, attr, elem, diff, url, callback) {
-  log.debug('options in fetchAndReplace = %j', options);
+function fetchAndReplace(request, attr, elem, url, callback) {
   var resource = elem.attr(attr);
   // For some reason top-level pages might make it here
   // and we want to break the function before trying to fetch them.
@@ -47,23 +55,18 @@ function fetchAndReplace(request, attr, elem, diff, url, callback) {
   var options = { url: resurl };
   request(options, function (err, response, body) {
     if (err) {
-      // Here, the callback is actually the function that continues
-      // iterating in async.reduce, so it is imperitive that we call it.
       log.error('request.js failed to fetch %s', url);
       log.error('Error: %s', err.message);
-      callback(err, diff);
+      callback(err, {});
     } else {
       source = new Buffer(body);
-      writeDiff(resource, resurl, source, diff, callback);
+      var datauri = helpers.dataURI(resurl, source);
+      var diff = {};
+      diff[resource] = datauri;
+      log.debug('Computed data URI for resource %s', resource);
+      callback(null, diff);
     }
   });
-}
-
-function writeDiff(resource, resurl, source, diff, callback) {
-  var newuri = helpers.dataURI(resurl, source);
-  var newDiff = {};
-  newDiff[resource] = newuri;
-  callback(null, _.extend(diff, newDiff));
 }
 
 module.exports = {
