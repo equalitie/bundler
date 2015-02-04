@@ -6,6 +6,7 @@ var fs = require('fs');
 var urllib = require('url');
 var bundler = require('../src/bundler');
 
+var listenAddress = "127.0.0.1";
 var portNumber = 9008;
 
 var config = JSON.parse(fs.readFileSync('./psconfig.json'));
@@ -71,5 +72,5 @@ function handleRequests(req, res) {
 	});
 }
 
-http.createServer(handleRequests).listen(portNumber);
-console.log('Proxy server listening on port ' + portNumber);
+http.createServer(handleRequests).listen(portNumber, listenAddress);
+console.log('Proxy server listening on ' + listenAddress + ":" + portNumber);
