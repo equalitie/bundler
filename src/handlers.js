@@ -13,24 +13,37 @@
 var urllib = require('url');
 var async = require('async');
 var _ = require('lodash');
+var cheerio = require('cheerio');
 var log = require('./logger');
 var helpers = require('./helpers');
 
-function replaceAll(request, $, selector, url, attr, callback) {
+function htmlFinder(url, source, selector, attr) {
+  var $ = cheerio.load(source);
+  return function (callback) {
+    $(selector).each(function (index, elem) {
+      var $_this = $(this);
+      var resource = $_this.attr(attr);
+      if (typeof resource !== 'undefined') {
+        log.debug('Calling callback for handling selector %s', selector);
+        callback(resource);
+      }
+    });
+  };
+}
+
+function replaceAll(request, url, finder, callback) {
   // Prepare functions for parallel invokation.
   var elementHandlers = [];
-  $(selector).each(function (index, elem) {
-    var $_this = $(this);
-    if (typeof $_this.attr(attr) !== 'undefined') {
-      log.debug('Creating element handler for %s', $_this.attr(attr));
-      elementHandlers.push(function (item) {
-        return function (asynccallback) {
-          fetchAndReplace(request, attr, item, url, asynccallback);
-        };
-      }($_this));
-    }
+  finder(function (resource) {
+    elementHandlers.push(function (asynccallback) {
+      makeDiff(request, url, resource, function (err, response, diff) {
+        // TODO - Implement post-resource hooks and call them here.
+        // What would they actually do?
+        asynccallback(err, diff);
+      });
+    });
   });
-  log.info('Found %d resources in %s with selector %s', elementHandlers.length, url, selector);
+  log.info('Found %d resources in %s', elementHandlers.length, url);
   async.parallel(elementHandlers, function (err, diffs) {
     if (err) {
       callback(err, {});
@@ -46,45 +59,35 @@ function replaceAll(request, $, selector, url, attr, callback) {
   });
 }
 
-function fetchAndReplace(request, attr, elem, url, callback) {
-  var resource = elem.attr(attr);
-  // For some reason top-level pages might make it here
-  // and we want to break the function before trying to fetch them.
-  if (typeof resource === 'undefined' || !resource) {
-    log.error('%s accidentally landed in the list of resources to fetch.', url);
-    return;
-  }
-  var resurl = urllib.resolve(url, resource);
-  var options = { url: resurl, encoding: null};
+function makeDiff(request, baseURL, resource, callback) {
+  var resourceURL = urllib.resolve(baseURL, resource);
+  var options = { url: resourceURL, encoding: null };
   request(options, function (err, response, body) {
     if (err) {
-      log.error('request.js failed to fetch %s', url);
-      log.error('Error: %s', err.message);
-      callback(err, {});
+      log.error('Failed to fetch %s. Error: %s', resourceURL, err.message);
+      callback(err, response, {});
     } else {
-      console.log(body instanceof Buffer);
-      //source = new Buffer(body);
-      var datauri = helpers.dataURI(resurl, body);
+      var datauri = helpers.dataURI(resourceURL, body);
       var diff = {};
       diff[resource] = datauri;
-      callback(null, diff);
+      callback(null, response, diff);
     }
   });
 }
 
 module.exports = {
-  replaceImages: function (request, $, url, callback) {
+  replaceImages: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceImages handler');
-    replaceAll(request, $, 'img', url, 'src', callback);
+    replaceAll(request, url, htmlFinder(url, originalDoc, 'img', 'src'), callback);
   },
 
-  replaceCSSFiles: function (request, $, url, callback) {
+  replaceCSSFiles: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceCSSFiles handler');
-    replaceAll(request, $, 'link[rel="stylesheet"]', url, 'href', callback);
+    replaceAll(request, url, htmlFinder(url, originalDoc, 'link[rel="stylesheet"]', 'href'), callback);
   },
 
-  replaceJSFiles: function (request, $, url, callback) {
+  replaceJSFiles: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceJSFiles handler');
-    replaceAll(request, $, 'script', url, 'src', callback);
+    replaceAll(request, url, htmlFinder(url, originalDoc, 'script', 'src'), callback);
   }
 };

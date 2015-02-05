@@ -79,8 +79,6 @@ function makeBundle(bundler, options) {
 }
 
 function replaceResources(bundler, response, body) {
-  var $ = cheerio.load(body);
-  log.debug('Loaded cheerio object');
   var makeRequest = function (opts, callback) {
     if (typeof opts === 'string') {
       opts = { url : opts };
@@ -96,17 +94,17 @@ function replaceResources(bundler, response, body) {
       }
     });
   };
-  invokeHandlers(bundler, $, makeRequest);
+  invokeHandlers(bundler, body, makeRequest);
 }
 
-function invokeHandlers(bundler, $, requestFn) {
+function invokeHandlers(bundler, originalDoc, requestFn) {
   var handlers = [];
   for (var i = 0, len = bundler.resourceHandlers.length; i < len; ++i) {
     handlers.push(function (index) {
       return function (asynccb) {
         // Instead of passing once-computed options to be reused in each handler,
         // we use our new request function to compute new options every time.
-        bundler.resourceHandlers[index](requestFn, $, bundler.url, asynccb);
+        bundler.resourceHandlers[index](requestFn, originalDoc, bundler.url, asynccb);
       };
     }(i));
   }
@@ -118,7 +116,7 @@ function invokeHandlers(bundler, $, requestFn) {
       var allDiffs = _.reduce(diffs, _.extend);
       log.info('Got diffs for %s', bundler.url);
       log.debug(Object.keys(diffs)[0]);
-      handleDiffs(bundler, $.html(), allDiffs);
+      handleDiffs(bundler, originalDoc, allDiffs);
     }
   });
 }
