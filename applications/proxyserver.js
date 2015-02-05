@@ -64,7 +64,6 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
 
-/*
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
 		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
@@ -81,7 +80,6 @@ function handleRequests(req, res) {
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
   bundleMaker.on('resourceRequest', reverseProxy(remapper));
-*/
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
