@@ -88,7 +88,7 @@ function handleRequests(req, res) {
 			console.log('Failed to create bundle for ' + req.url);
 			console.log('Error: ' + err.message);
 		} else {
-			res.writeHead(200, {'Content-Type': 'text/html'});
+			res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
 			res.write(bundle);
 			res.end();
 		}
