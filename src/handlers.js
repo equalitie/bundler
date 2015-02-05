@@ -1,7 +1,7 @@
 /***********************
  ** Handler Functions **
  ***********************
- * 
+ *
  * Handlers expect to be called with:
  * $        - A cheerio instance containing the HTML to scan for resources.
  * url      - The URL of the original request.
@@ -55,15 +55,16 @@ function fetchAndReplace(request, attr, elem, url, callback) {
     return;
   }
   var resurl = urllib.resolve(url, resource);
-  var options = { url: resurl };
+  var options = { url: resurl, encoding: null};
   request(options, function (err, response, body) {
     if (err) {
       log.error('request.js failed to fetch %s', url);
       log.error('Error: %s', err.message);
       callback(err, {});
     } else {
-      source = new Buffer(body);
-      var datauri = helpers.dataURI(resurl, source);
+      console.log(body instanceof Buffer);
+      //source = new Buffer(body);
+      var datauri = helpers.dataURI(resurl, body);
       var diff = {};
       diff[resource] = datauri;
       callback(null, diff);
