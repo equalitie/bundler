@@ -4,6 +4,7 @@
 var http = require('http');
 var fs = require('fs');
 var urllib = require('url');
+var qs = require('querystring');
 var _ = require('lodash');
 var bundler = require('../src/bundler');
 
@@ -57,11 +58,13 @@ function reverseProxy(remapper) {
 var remapper = {};
 
 function handleRequests(req, res) {
-	var bundleMaker = new bundler.Bundler(req.url);
+  var url = qs.parse(urllib.parse(req.url).query).url;
+	var bundleMaker = new bundler.Bundler(url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
 
+/*
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
 		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
@@ -78,6 +81,7 @@ function handleRequests(req, res) {
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
   bundleMaker.on('resourceRequest', reverseProxy(remapper));
+*/
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {

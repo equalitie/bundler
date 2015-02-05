@@ -22,6 +22,7 @@ function replaceAll(request, $, selector, url, attr, callback) {
   $(selector).each(function (index, elem) {
     var $_this = $(this);
     if (typeof $_this.attr(attr) !== 'undefined') {
+      log.debug('Creating element handler for %s', $_this.attr(attr));
       elementHandlers.push(function (item) {
         return function (asynccallback) {
           fetchAndReplace(request, attr, item, url, asynccallback);
@@ -38,6 +39,8 @@ function replaceAll(request, $, selector, url, attr, callback) {
       for (var i = 0, len = diffs.length; i < len; ++i) {
         allDiffs = _.extend(allDiffs, diffs[i]);
       }
+      log.debug('Type of allDiffs = %s', typeof allDiffs);
+      log.debug(Object.keys(allDiffs)[0]);
       callback(null, allDiffs);
     }
   });
