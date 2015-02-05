@@ -1,5 +1,7 @@
 {
 	"useProxy": false,
+	"drop_user": "nobody",
+	"drop_group": "nogroup",
 	"proxyAddress": "localhost:9008",
 	"followFirstRedirect": true,
 	"followAllRedirects": false,

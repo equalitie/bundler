@@ -31,6 +31,12 @@ var config = {
 
 _.extend(config, JSON.parse(fs.readFileSync(configFile)));
 
+// Log to syslog when not running in verbose mode
+/* if (process.argv[2] != '-v') {
+ *	Syslog.init("bundler", Syslog.LOG_PID | Syslog.LOG_ODELAY, Syslog.LOG_LOCAL0);
+ * }
+ */
+
 function extractHeaders(req, headers) {
 	var newHeaders = {};
 	for (var i = 0, len = headers.length; i < len; ++i) {
@@ -41,17 +47,17 @@ function extractHeaders(req, headers) {
 
 function reverseProxy(remapper) {
   return function (options, next) {
-    var url = urllib.parse(options.url);
-    var hostname = url.hostname;
-    var resource = url.path;
-    if (!options.hasOwnProperty('headers')) {
-      options.headers = {};
-    }
-    if (remapper.hasOwnProperty(hostname)) {
-      options.url = urllib.resolve(remapper[hostname], resource);
-      options.headers['Host'] = hostname;
-    }
-    next(null, options);
+	var url = urllib.parse(options.url);
+	var hostname = url.hostname;
+	var resource = url.path;
+	if (!options.hasOwnProperty('headers')) {
+	  options.headers = {};
+	}
+	if (remapper.hasOwnProperty(hostname)) {
+	  options.url = urllib.resolve(remapper[hostname], resource);
+	  options.headers['Host'] = hostname;
+	}
+	next(null, options);
   };
 }
 
@@ -95,5 +101,12 @@ function handleRequests(req, res) {
 	});
 }
 
-http.createServer(handleRequests).listen(portNumber, listenAddress);
+http.createServer(handleRequests).listen(portNumber, listenAddress, function() {
+	//Drop privileges if running as root
+	if (process.getuid() === 0) {
+	console.log("Dropping privileges");
+		process.setgid(config.drop_group);
+		process.setuid(config.drop_user);
+	}
+});
 console.log('Proxy server listening on ' + listenAddress + ":" + portNumber);
