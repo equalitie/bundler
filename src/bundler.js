@@ -78,13 +78,13 @@ function makeBundle(bundler, options) {
   });
 }
 
-function wrappedRequest(bundler) {
+function wrappedRequest(bundler, originalResponse, originalBody) {
   return function (opts, callback) {
     if (typeof opts === 'string') {
       opts = { url : opts };
     }
     async.reduce(bundler.resourceRequestHooks, opts, function (memo, hook, next) {
-      hook(memo, next);
+      hook(memo, next, originalBody, originalResponse);
     }, function (err, options) {
       if (err) {
         log.error('Failed to call a resource request hook. Error: %s', err.mesage);
@@ -96,9 +96,9 @@ function wrappedRequest(bundler) {
             bundler.callback(err, null);
           } else {
             async.reduce(bundler.resourceResponseHooks, body, function (memoBody, nextHook, iterFn) {
-              hook(memoBody, response, iterFn);
+              hook(wrappedRequest(bundler, response, body), memoBody, response, iterFn);
             }, function (error, newBody) {
-              callback(wrappedRequest(bundler), error, response, newBody);
+              callback(error, response, newBody);
             });
           }
         });
@@ -123,7 +123,7 @@ function replaceResources(bundler, response, body) {
       }
     });
   };
-  invokeHandlers(bundler, body, makeRequest);
+  invokeHandlers(bundler, body, wrappedRequest(bundler, response, body));
 }
 
 function invokeHandlers(bundler, originalDoc, requestFn) {
