@@ -38,8 +38,12 @@ describe('bundler', function () {
     var called = false;
     var bundleMaker = new bundler.Bundler('https://news.ycombinator.com');
 
-    bundleMaker.on('resourceRequest', function (options, next, $, response) {
+    bundleMaker.on('resourceRequest', function (options, next, body, response) {
       called = true;
+      options.should.have.property('url');
+      should.exist(next);
+      should.exist(body);
+      should.exist(response);
       next(null, options);
     });
 
@@ -49,6 +53,28 @@ describe('bundler', function () {
       should.not.exist(err);
       should.exist(bundle);
       should(called).be.ok;
+      done();
+    });
+  });
+
+  it('should call hooks after fetching each resource', function (done) {
+    var called = false;
+    var bundleMaker = new bundler.Bundler('https://news.ycombinator.com');
+
+    bundleMaker.on('resourceReceived', function (requestFn, body, response, next) {
+      called = true;
+      should.exist(requestFn);
+      should.exist(body);
+      should.exist(response);
+      next(null, body);
+    });
+
+    bundleMaker.on('originalReceived', bundler.replaceImages);
+
+    bundleMaker.bundle(function (err, bundle) {
+      should.not.exist(err);
+      called.should.be.true;
+      should.exist(bundle);
       done();
     });
   });
