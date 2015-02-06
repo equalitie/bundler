@@ -78,6 +78,35 @@ function makeBundle(bundler, options) {
   });
 }
 
+function wrappedRequest(bundler) {
+  return function (opts, callback) {
+    if (typeof opts === 'string') {
+      opts = { url : opts };
+    }
+    async.reduce(bundler.resourceRequestHooks, opts, function (memo, hook, next) {
+      hook(memo, next);
+    }, function (err, options) {
+      if (err) {
+        log.error('Failed to call a resource request hook. Error: %s', err.mesage);
+        bundler.callback(err, null);
+      } else {
+        request(options, function (err, response, body) {
+          if (err) {
+            log.error('Failed to call a resource response hook. Error: %s', err.message);
+            bundler.callback(err, null);
+          } else {
+            async.reduce(bundler.resourceResponseHooks, body, function (memoBody, nextHook, iterFn) {
+              hook(memoBody, response, iterFn);
+            }, function (error, newBody) {
+              callback(wrappedRequest(bundler), error, response, newBody);
+            });
+          }
+        });
+      }
+    });
+  };
+}
+
 function replaceResources(bundler, response, body) {
   var makeRequest = function (opts, callback) {
     if (typeof opts === 'string') {
