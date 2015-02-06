@@ -52,7 +52,7 @@ A `hook` is a function that can manipulate request option data or diffs.
 
 ![Architectural diagram](https://raw.githubusercontent.com/equalitie/bundler/master/architecture.png)
 
-Bundler provides four opportunities to inject new functionality into the
+Bundler provides five opportunities to inject new functionality into the
 bundling process.
 
 1. `originalRequest`  - Before fetching the first, original document
@@ -267,7 +267,7 @@ Hooks to be added to the Bundler object using the `resourceRequest` event
 should have the following form:
 
 ```javascript
-function handlerName(options, callback, $, response) {
+function handlerName(options, callback, originalDocument, response) {
   // Do something with options
   callback(err, options);
 }
@@ -281,9 +281,8 @@ that the same handlers written for `originalRequest` can be reused here.
 The `options` and `callback` arguments here are the same as they are for the
 `originalRequest` handlers.
 
-The `$` argument here is a [Cheerio](https://github.com/cheeriojs/cheerio#cheerio--)
-object loaded with the contents of the original document. It can be used in any way
-the library allows.
+The `originalDocument` argument here contains the content of the originally
+fetched document.
 
 The `response` argument is the response object provided by the call to `request` 
 for the original document, which is an instance of
@@ -298,7 +297,7 @@ var bundleMaker = new bundler.Bundler(url);
 
 bundleMaker.on('originalReceived', bundler.replaceImages);
 
-bundleMaker.on('resourceRequest', function (options, callback, $, response) {
+bundleMaker.on('resourceRequest', function (options, callback, doc, response) {
   if (!options.hasOwnProperty('headers')) {
     options.headers = {};
   }
