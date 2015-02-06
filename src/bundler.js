@@ -24,7 +24,8 @@ function Bundler(url) {
   this.url = url;
   this.resourceHandlers = new Array(); 
   this.originalRequestHooks = new Array(); 
-  this.resourceRequestHooks = new Array(); 
+  this.resourceRequestHooks = new Array();
+  this.resourceReceivedHooks = new Array();
   this.diffHooks = new Array();
   this.callback = function () {};
   return this;
@@ -40,6 +41,9 @@ Bundler.prototype.on = function (hookname, handler) {
     break;
   case 'resourceRequest':
     this.resourceRequestHooks.push(handler);
+    break;
+  case 'resourceReceived':
+    this.resourceReceivedHooks.push(handler);
     break;
   case 'diffsReceived':
     this.diffHooks.push(handler);
@@ -95,8 +99,8 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
             log.error('Failed to call a resource response hook. Error: %s', err.message);
             bundler.callback(err, null);
           } else {
-            async.reduce(bundler.resourceResponseHooks, body, function (memoBody, nextHook, iterFn) {
-              hook(wrappedRequest(bundler, response, body), memoBody, response, iterFn);
+            async.reduce(bundler.resourceReceivedHooks, body, function (memoBody, nextHook, iterFn) {
+              nextHook(wrappedRequest(bundler, response, body), memoBody, response, iterFn);
             }, function (error, newBody) {
               callback(error, response, newBody);
             });
