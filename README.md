@@ -57,8 +57,9 @@ bundling process.
 
 1. `originalRequest`  - Before fetching the first, original document
 2. `originalReceived` - Specify handlers used to scan the document and produce diffs 
-3. `resourceRequest`  - Before fetching any resource referenced by the original document
-4. `diffsReceived`    - After accumulating a collection of resource URLs and their data URIs
+3. `resourceRequest`  - Before fetching each resource referenced by the original document
+4. `resourceReceived` - After retrieving each resource referenced by the original document
+5. `diffsReceived`    - After accumulating a collection of resource URLs and their data URIs
 
 As seen above, you can register handlers using the `originalReceived` event.
 
@@ -149,6 +150,11 @@ bundleMaker.bundle(function (err, bundle) {
 Note that the only difference between this example and the one in the first section
 is that this one registers hooks for the `resourceRequest` method. You can reuse
 handlers written for `originalRequest` here.
+
+## After retrieving each resource
+
+Bundler allows hooks to be registered to directly manipulate the body of a fetched resource through the `resourceReceived` event.  Currently no 
+handlers are exported directly by bundler for these events.
 
 **Currently no special handlers are implemented here**
 
@@ -303,6 +309,18 @@ bundleMaker.on('resourceRequest', function (options, callback, $, response) {
 bundleMaker.bundle(function (err, bundle) {
   console.log(bundle);
 });
+```
+
+## After retrieving each resource
+
+Bundler allows hooks to be registered to directly manipulate the body of a fetched resource through the `resourceReceived` event.  Such hooks have
+the following signature.
+
+```javascript
+function handlerName(requestFn, body, response, callback) {
+  // Do something with resource body
+  callback(err, body);
+}
 ```
 
 ## After building data URIs
