@@ -73,7 +73,7 @@ function makeBundle(bundler, options) {
       log.error('Error making request to %s; Error: %s', bundler.url, err.message);
       bundler.callback(err, null);
     } else {
-      replaceResources(bundler, res, body);
+      invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
     }
   });
 }
@@ -105,25 +105,6 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
       }
     });
   };
-}
-
-function replaceResources(bundler, response, body) {
-  var makeRequest = function (opts, callback) {
-    if (typeof opts === 'string') {
-      opts = { url : opts };
-    }
-    async.reduce(bundler.resourceRequestHooks, opts, function (memo, hook, next) {
-      hook(memo, next);
-    }, function (err, options) {
-      if (err) {
-        log.error('Failed to call a resource request hook. Error: %s', err.mesage);
-        bundler.callback(err, null);
-      } else {
-        request(options, callback);
-      }
-    });
-  };
-  invokeHandlers(bundler, body, wrappedRequest(bundler, response, body));
 }
 
 function invokeHandlers(bundler, originalDoc, requestFn) {
