@@ -12,5 +12,14 @@
  * See the README for more information about these kinds of hooks.
  */
 
+var helpers = require('./helpers');
+
 module.exports = {
+  /* resourceRequest handlers */
+
+  /* resourceRetrieved handlers */
+
+  bundleCSSRecursively: function (request, body, response, callback) {
+    helpers.replaceAll(request, response.url, helpers.cssReferenceFinder(body), callback);
+  }
 };

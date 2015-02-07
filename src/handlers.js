@@ -17,7 +17,7 @@ var cheerio = require('cheerio');
 var log = require('./logger');
 var helpers = require('./helpers');
 
-function htmlFinder(url, source, selector, attr) {
+function htmlFinder(source, selector, attr) {
   var $ = cheerio.load(source);
   return function (callback) {
     $(selector).each(function (index, elem) {
@@ -78,16 +78,16 @@ function makeDiff(request, baseURL, resource, callback) {
 module.exports = {
   replaceImages: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceImages handler');
-    replaceAll(request, url, htmlFinder(url, originalDoc, 'img', 'src'), callback);
+    replaceAll(request, url, htmlFinder(originalDoc, 'img', 'src'), callback);
   },
 
   replaceCSSFiles: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceCSSFiles handler');
-    replaceAll(request, url, htmlFinder(url, originalDoc, 'link[rel="stylesheet"]', 'href'), callback);
+    replaceAll(request, url, htmlFinder(originalDoc, 'link[rel="stylesheet"]', 'href'), callback);
   },
 
   replaceJSFiles: function (request, originalDoc, url, callback) {
     log.debug('Calling replaceJSFiles handler');
-    replaceAll(request, url, htmlFinder(url, originalDoc, 'script', 'src'), callback);
+    replaceAll(request, url, htmlFinder(originalDoc, 'script', 'src'), callback);
   }
 };
