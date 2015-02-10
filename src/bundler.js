@@ -94,16 +94,34 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         log.error('Failed to call a resource request hook. Error: %s', err.mesage);
         bundler.callback(err, null);
       } else {
+        options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
             log.error('Failed to call a resource response hook. Error: %s', err.message);
             bundler.callback(err, null);
           } else {
-            async.reduce(bundler.resourceReceivedHooks, body, function (memoBody, nextHook, iterFn) {
-              nextHook(wrappedRequest(bundler, response, body), memoBody, response, iterFn);
-            }, function (error, newBody) {
-              callback(error, response, newBody);
-            });
+            var contentType = response.headers['content-type'];
+            contentType = contentType ? contentType : response.headers['Content-Type'];
+            if (typeof contentType !== 'undefined' && contentType.indexOf('image') >= 0) {
+              callback(null, response, body);
+            } else {
+              var wasBuffer = Buffer.isBuffer(body);
+              if (wasBuffer) {
+                body = body.toString();
+              }
+              log.debug('%s stored as buffer? %s', options.url, wasBuffer);
+              log.info('Calling resourceReceivedHooks for %s', options.url);
+              async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
+                nextHook(wrappedRequest(bundler, response, body), memoDiffs, response, iterFn);
+              }, function (error, diffs) {
+                var newBody = helpers.applyDiffs(body, diffs);
+                if (wasBuffer) {
+                  callback(error, response, new Buffer(newBody));
+                } else {
+                  callback(error, response, newBody);
+                }
+              });
+            }
           }
         });
       }
