@@ -20,6 +20,18 @@ module.exports = {
   /* resourceRetrieved handlers */
 
   bundleCSSRecursively: function (request, body, response, callback) {
-    helpers.replaceAll(request, response.url, helpers.cssReferenceFinder(body), callback);
+    body = body.toString();
+    if (response.headers['content-type'] !== undefined && response.headers['content-type'].indexOf('css') >= 0) {
+      helpers.replaceAll(request, response.url, helpers.cssReferenceFinder(body), function (err, diffs) {
+        if (err) {
+          callback(err, body);
+        } else {
+          console.log(diffs);
+          callback(null, helpers.applyDiffs(body, diffs));
+        }
+      });
+    } else {
+      callback(null, body);
+    }
   }
 };
