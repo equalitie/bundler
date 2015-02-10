@@ -31,6 +31,18 @@ describe('helpers', function () {
       duri.should.be.exactly('data:image/png;base64,aGVsbG8=');
     });
   });
+
+  describe('cssReferenceFinder', function () {
+    it('should call a callback with every instance of url() found', function (done) {
+      var test = 'div#test { background:url(/images/srpr/logo11w.png) ' +
+                 'no-repeat;background-size:269px 95px;height:95px;width:269px }';
+      bundler.cssReferenceFinder(test)(function (url) {
+        should.exist(url);
+        url.should.be.exactly('/images/srpr/logo11w.png');
+        done();
+      });
+    });
+  });
 });
 
 describe('requests', function () {
