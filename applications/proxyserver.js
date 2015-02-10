@@ -40,7 +40,9 @@ _.extend(config, JSON.parse(fs.readFileSync(configFile)));
 function extractHeaders(req, headers) {
 	var newHeaders = {};
 	for (var i = 0, len = headers.length; i < len; ++i) {
-		newHeaders[headers[i]] = req.headers[headers[i]];
+		if (req.headers.hasOwnProperty(headers[i])) {
+			newHeaders[headers[i]] = req.headers[headers[i]];
+		}
 	}
 	return newHeaders;
 }
