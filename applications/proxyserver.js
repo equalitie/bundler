@@ -52,11 +52,12 @@ function reverseProxy(remapper) {
 	var url = urllib.parse(options.url);
 	var hostname = url.hostname;
 	var resource = url.path;
+	var protocol = url.protocol;
 	if (!options.hasOwnProperty('headers')) {
 	  options.headers = {};
 	}
 	if (remapper.hasOwnProperty(hostname)) {
-	  options.url = urllib.resolve(remapper[hostname], resource);
+	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
 	  options.headers['Host'] = hostname;
 	}
 	next(null, options);
