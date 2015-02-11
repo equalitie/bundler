@@ -5,7 +5,7 @@
  * replace different resources as well as a couple of functions, namely
  * mimetype and dataURI to help in writing custom handlers.
  */
- 
+
 var _ = require('lodash');
 var async = require('async');
 var request = require('request');
@@ -22,8 +22,8 @@ var log = require('./logger');
 
 function Bundler(url) {
   this.url = url;
-  this.resourceHandlers = new Array(); 
-  this.originalRequestHooks = new Array(); 
+  this.resourceHandlers = new Array();
+  this.originalRequestHooks = new Array();
   this.resourceRequestHooks = new Array();
   this.resourceReceivedHooks = new Array();
   this.diffHooks = new Array();
@@ -56,7 +56,11 @@ Bundler.prototype.on = function (hookname, handler) {
 
 Bundler.prototype.bundle = function (callback) {
   this.callback = callback;
-  var initOptions = { url: this.url };
+  var initOptions = {
+      url: this.url,
+      strictSSL: false,
+      rejectUnauthorized: false
+  };
   var thisBundler = this;
   async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
     log.debug('in Bundler.send/async.reduce, memo =', memo);
@@ -74,7 +78,7 @@ Bundler.prototype.bundle = function (callback) {
 function makeBundle(bundler, options) {
   request(options, function (err, res, body) {
     if (err) {
-      log.error('Error making request to %s; Error: %s', bundler.url, err.message);
+      log.error('Error making request to %s; Error: %s %s', bundler.url, err.stack, err.message);
       bundler.callback(err, null);
     } else {
       invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
