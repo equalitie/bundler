@@ -64,7 +64,8 @@ function reverseProxy(remapper) {
   };
 }
 
-var remapper = {"distributed.deflect.ca": "deflect.ca"};
+var remapper = {"distributed.deflect.ca": "deflect.ca",
+               "nosmo.me": "fulltimeinter.net"};
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
