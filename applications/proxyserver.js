@@ -64,7 +64,7 @@ function reverseProxy(remapper) {
   };
 }
 
-var remapper = {};
+var remapper = {"distributed.deflect.ca": "deflect.ca"};
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
@@ -88,6 +88,7 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalRequest', bundler.followRedirects(
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
+  bundleMaker.on('originalRequest', reverseProxy(remapper));
   bundleMaker.on('resourceRequest', reverseProxy(remapper));
 
 	bundleMaker.bundle(function (err, bundle) {
