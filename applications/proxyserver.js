@@ -87,10 +87,13 @@ function handleRequests(req, res) {
 
   bundleMaker.on('resourceRequest', reverseProxy(remapper));
 
+  bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
+
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
 			console.log('Failed to create bundle for ' + req.url);
 			console.log('Error: ' + err.message);
+      res.end();
 		} else {
 			res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
 			res.write(bundle);

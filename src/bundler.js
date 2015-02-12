@@ -59,7 +59,6 @@ Bundler.prototype.bundle = function (callback) {
   var initOptions = { url: this.url };
   var thisBundler = this;
   async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
-    log.debug('in Bundler.send/async.reduce, memo =', memo);
     hook(memo, next);
   }, function (err, options) {
     if (err) {
@@ -95,6 +94,9 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         bundler.callback(err, null);
       } else {
         options.encoding = null;
+        request(options, callback);
+        /*
+        options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
             log.error('Failed to call a resource response hook. Error: %s', err.message);
@@ -105,25 +107,26 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
             if (typeof contentType !== 'undefined' && contentType.indexOf('image') >= 0) {
               callback(null, response, body);
             } else {
-              var wasBuffer = Buffer.isBuffer(body);
-              if (wasBuffer) {
-                body = body.toString();
-              }
-              log.debug('%s stored as buffer? %s', options.url, wasBuffer);
-              log.info('Calling resourceReceivedHooks for %s', options.url);
+              body = body.toString();
+
               async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
-                nextHook(wrappedRequest(bundler, response, body), memoDiffs, response, iterFn);
+                nextHook(wrappedRequest(bundler, response, body), body, memoDiffs, response, iterFn);
               }, function (error, diffs) {
-                var newBody = helpers.applyDiffs(body, diffs);
-                if (wasBuffer) {
-                  callback(error, response, new Buffer(newBody));
+                if (error) {
+                  log.error('Error calling resourceReceivedHooks; Error: %s', error.message);
+                  callback(error, response, body);
                 } else {
-                  callback(error, response, newBody);
+                  log.debug('After calling resourceReceivedHooks, diffs = ', diffs);
+                  var newBody = helpers.applyDiffs(body, diffs);
+                  log.debug('newBody.length = ', newBody.length);
+                  callback(null, response, new Buffer(newBody));
                 }
               });
+
             }
           }
         });
+        */
       }
     });
   };

@@ -15,17 +15,14 @@ var helpers = require('./helpers');
 
 module.exports = {
   replaceImages: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceImages handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'img', 'src'), callback);
   },
 
   replaceCSSFiles: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceCSSFiles handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'link[rel="stylesheet"]', 'href'), callback);
   },
 
   replaceJSFiles: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceJSFiles handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'script', 'src'), callback);
   }
 };

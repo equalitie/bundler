@@ -7,7 +7,6 @@
 
 var urllib = require('url');
 var async = require('async');
-var css = require('css');
 var _ = require('lodash');
 var cheerio = require('cheerio');
 var mime = require('mime');
@@ -19,7 +18,12 @@ function makeDiff(request, baseURL, resource, callback) {
   request(options, function (err, response, body) {
     if (err) {
       log.error('Failed to fetch %s. Error: %s', resourceURL, err.message);
-      callback(err, response, {});
+      if (err.message.substring(0, 11) === 'Invalid URI') {
+        callback(null, response, {});
+      } else {
+        log.info('Ignoring invalid URL to simply pass resource on as is');
+        callback(err, response, {});
+      }
     } else {
       var datauri = dataURI(resourceURL, body);
       var diff = {};
@@ -79,7 +83,6 @@ module.exports = {
         var $_this = $(this);
         var resource = $_this.attr(attr);
         if (typeof resource !== 'undefined') {
-          log.debug('Calling callback for handling selector %s', selector);
           callback(resource);
         }
       });
@@ -87,25 +90,21 @@ module.exports = {
   },
 
   cssReferenceFinder: function (source) {
-    var tree = css.parse(source);
     return function (callback) {
-      var rules = tree.stylesheet.rules;
-      for (var i = 0, len = rules.length; i < len; ++i) {
-        var declarations = rules[i].declarations;
-        if (typeof declarations === 'undefined') {
-          continue;
+      var index = source.indexOf('url(');
+      while (index >= 0) {
+        var i2 = index + 4;
+        // Find the end of the declaration then go back to the closing paren.
+        while ('; }\n'.indexOf(source.charAt(i2)) < 0) {
+          i2++;
         }
-        for (var j = 0, len2 = declarations.length; j < len2; ++j) {
-          var value = declarations[j].value;
-          if (value.substring(0, 4) === 'url(') {
-            // TODO: Split the string on spaces to get all the url references that might appear
-            var start = 4;
-            var end = value.split(' ')[0].lastIndexOf(')');
-            var uri = strReplaceAll(value.substring(start, end), '"', '');
-            log.info('Found uri %s', uri);
-            callback(uri);
-          }
+        while (source.charAt(i2) !== ')') {
+          i2--;
         }
+        var uri = strReplaceAll(strReplaceAll(source.substring(index + 4, i2), '"', ''), '\'', '');
+        log.debug('Found uri %s', uri);
+        index = source.indexOf('url(', index + 4);
+        callback(uri);
       }
     };
   },
@@ -116,8 +115,6 @@ module.exports = {
     finder(function (resource) {
       elementHandlers.push(function (asynccallback) {
         makeDiff(request, url, resource, function (err, response, diff) {
-          // TODO - Implement post-resource hooks and call them here.
-          // What would they actually do?
           asynccallback(err, diff);
         });
       });
@@ -131,8 +128,6 @@ module.exports = {
         for (var i = 0, len = diffs.length; i < len; ++i) {
           allDiffs = _.extend(allDiffs, diffs[i]);
         }
-        log.debug('Type of allDiffs = %s', typeof allDiffs);
-        log.debug(Object.keys(allDiffs)[0]);
         callback(null, allDiffs);
       }
     });
