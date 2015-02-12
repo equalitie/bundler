@@ -94,18 +94,7 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         log.error('Failed to call a resource request hook. Error: %s', err.mesage);
         bundler.callback(err, null);
       } else {
-        request(options, function (err, response, body) {
-          if (err) {
-            log.error('Failed to call a resource response hook. Error: %s', err.message);
-            bundler.callback(err, null);
-          } else {
-            async.reduce(bundler.resourceReceivedHooks, body, function (memoBody, nextHook, iterFn) {
-              nextHook(wrappedRequest(bundler, response, body), memoBody, response, iterFn);
-            }, function (error, newBody) {
-              callback(error, response, newBody);
-            });
-          }
-        });
+        request(options, callback);
       }
     });
   };
