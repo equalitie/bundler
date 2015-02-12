@@ -13,6 +13,8 @@ var portNumber = 9008;
 
 var configFile = './psconfig.json';
 
+var remaps = {};
+
 var config = {
   // Proxy requests for documents and resources to another server
   "useProxy": false,
@@ -26,10 +28,12 @@ var config = {
   ],
   // A mapping of headers to values to write for them in requests.
   "spoofHeaders": {
-  }
+  },
+  "remapsFile": "./remaps.json"
 };
 
 _.extend(config, JSON.parse(fs.readFileSync(configFile)));
+_.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
 
 // Log to syslog when not running in verbose mode
 /* if (process.argv[2] != '-v') {
@@ -60,8 +64,6 @@ function reverseProxy(remapper) {
 	next(null, options);
   };
 }
-
-var remapper = {};
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;

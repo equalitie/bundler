@@ -12,5 +12,6 @@
 	],
 	"spoofHeaders": {
 		"Origin": "Bundler"
-	}
+	},
+	"remapsFile": "./remaps.json"
 }
