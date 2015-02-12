@@ -87,7 +87,7 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalRequest', bundler.followRedirects(
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
-  bundleMaker.on('resourceRequest', reverseProxy(remapper));
+  bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
