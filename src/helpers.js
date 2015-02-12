@@ -12,25 +12,52 @@ var cheerio = require('cheerio');
 var mime = require('mime');
 var log = require('./logger');
 
-module.exports = {
-  mimetype: function (url) {
-    var i = url.lastIndexOf('.');
-    var defaultMT = 'text/plain';
-    if (i < 0) {
-      return defaultMT;
-    }
-    var ext = '.' + url.substring(i, url.length);
-    ext = ext.match(/\.\w+/);
-    if (ext) {
-      return mime.lookup(ext[0]);
-    }
-    return defaultMT;
-  },
+function dataURI(response, url, content) {
+  var encoded = content.toString('base64');
+  var ct = response.headers['Content-Type'];
+  if (typeof ct === 'undefined') {
+    ct = response.headers['content-type'];
+  }
+  if (typeof ct === 'undefined') {
+    ct = mimetype(url);
+  }
+  return 'data:' + ct + ';base64,' + encoded;
+}
 
-  dataURI: function (url, content) {
-    var encoded = content.toString('base64');
-    return 'data:' + this.mimetype(url) + ';base64,' + encoded;
-  },
+function makeDiff(request, baseURL, resource, callback) {
+  var resourceURL = urllib.resolve(baseURL, resource);
+  var options = { url: resourceURL, encoding: null };
+  request(options, function (err, response, body) {
+    if (err) {
+      log.error('Failed to fetch %s. Error: %s', resourceURL, err.message);
+      callback(err, response, {});
+    } else {
+      var datauri = dataURI(response, resourceURL, body);
+      var diff = {};
+      diff[resource] = datauri;
+      callback(null, response, diff);
+    }
+  });
+}
+
+function mimetype(url) {
+  var i = url.lastIndexOf('.');
+  var defaultMT = 'text/plain';
+  if (i < 0) {
+    return defaultMT;
+  }
+  var ext = '.' + url.substring(i, url.length);
+  ext = ext.match(/\.\w+/);
+  if (ext) {
+    return mime.lookup(ext[0]);
+  }
+  return defaultMT;
+}
+
+module.exports = {
+  dataURI: dataURI,
+  mimetype: mimetype,
+  makeDiff: makeDiff,
 
   htmlFinder: function (source, selector, attr) {
     var $ = cheerio.load(source);
@@ -51,7 +78,7 @@ module.exports = {
     var elementHandlers = [];
     finder(function (resource) {
       elementHandlers.push(function (asynccallback) {
-        this.makeDiff(request, url, resource, function (err, response, diff) {
+        makeDiff(request, url, resource, function (err, response, diff) {
           // TODO - Implement post-resource hooks and call them here.
           // What would they actually do?
           asynccallback(err, diff);
@@ -73,20 +100,4 @@ module.exports = {
       }
     });
   },
-
-  makeDiff: function (request, baseURL, resource, callback) {
-    var resourceURL = urllib.resolve(baseURL, resource);
-    var options = { url: resourceURL, encoding: null };
-    request(options, function (err, response, body) {
-      if (err) {
-        log.error('Failed to fetch %s. Error: %s', resourceURL, err.message);
-        callback(err, response, {});
-      } else {
-        var datauri = this.dataURI(resourceURL, body);
-        var diff = {};
-        diff[resource] = datauri;
-        callback(null, response, diff);
-      }
-    });
-  }
 };
