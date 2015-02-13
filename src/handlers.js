@@ -15,17 +15,27 @@ var helpers = require('./helpers');
 
 module.exports = {
   replaceImages: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceImages handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'img', 'src'), callback);
   },
 
   replaceCSSFiles: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceCSSFiles handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'link[rel="stylesheet"]', 'href'), callback);
   },
 
   replaceJSFiles: function (request, originalDoc, url, callback) {
-    log.debug('Calling replaceJSFiles handler');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'script', 'src'), callback);
+  },
+
+  replaceLinks: function (replacer) {
+    return function (request, originalDoc, url, callback) {
+      var diffs = {};
+      helpers.htmlFinder(originalDoc, 'a', 'href')(function (href) {
+        var replacement = replacer(url, href);
+        if (typeof replacement !== 'undefined' && replacement !== null) {
+          diffs[href] = replacement;
+        }
+      });
+      callback(null, diffs);
+    };
   }
 };

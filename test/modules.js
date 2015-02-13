@@ -122,6 +122,29 @@ describe('handlers', function () {
       });
     });
   });
+
+  describe('replaceLinks', function () {
+    it('should call a provided function to replace certain links', function (done) {
+      var originalURL = 'https://news.ycombinator.com';
+      request(originalURL, function (err, response, body) {
+        var linkCount = 0;
+        function replaceAllLinks(url, resource) {
+          linkCount++;
+          return '' + linkCount;
+        }
+        bundler.replaceLinks(replaceAllLinks)(request, body, originalURL, function (err, diffs) {
+          should.not.exist(err);
+          should.exist(diffs);
+          var keys = Object.keys(diffs);
+          should.exist(keys);
+          keys.should.have.property('length');
+          diffs[keys[0]].should.be.exactly('1');
+          diffs[keys[keys.length - 1]].should.be.exactly('' + linkCount);
+          done();
+        });
+      });
+    });
+  });
 });
 
 describe('requests', function() {
