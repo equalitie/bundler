@@ -71,6 +71,7 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+  bundleMaker.on('originalReceived', bundler.replaceURLCalls);
 
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
