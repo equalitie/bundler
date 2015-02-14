@@ -139,19 +139,10 @@ function handleDiffs(bundler, html, diffs) {
   });
 }
 
-function strReplaceAll(string, str1, str2) {
-  var index = string.indexOf(str1);
-  while (index >= 0) {
-    string = string.replace(str1, str2);
-    index = string.indexOf(str1, index);
-  }
-  return string;
-}
-
 function applyDiffs(string, diffs) {
   var keys = Object.keys(diffs);
   for (var i = 0, len = keys.length; i < len; ++i) {
-    string = strReplaceAll(string, keys[i], diffs[keys[i]]);
+    string = helpers.strReplaceAll(string, keys[i], diffs[keys[i]]);
   }
   return string;
 }

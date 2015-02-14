@@ -10,6 +10,8 @@
  * a series of handler calls.
  */
 
+var async = require('async');
+var urllib = require('url');
 var log = require('./logger');
 var helpers = require('./helpers');
 
@@ -37,5 +39,29 @@ module.exports = {
       });
       callback(null, diffs);
     };
+  },
+
+  replaceURLCalls: function (request, originalDoc, url, callback) {
+    var urlCalls = [];
+    helpers.htmlFinder(originalDoc, '*', 'style')(function (style) {
+      var index = style.indexOf('url(');
+      if (index < 0) {
+        return;
+      }
+      var i2 = index + 4;
+      while ('; }\n'.indexOf(style.charAt(i2)) < 0) {
+        i2++;
+      }
+      while (style.charAt(i2) !== ')') {
+        i2--;
+      }
+      var urlVal = style.substring(index + 4, i2);
+      urlCalls.push(helpers.strReplaceAll(helpers.strReplaceAll(urlVal, '"', ''), '\'', ''));
+    });
+    async.reduce(urlCalls, {}, function (memo, nextURL, iter) {
+      helpers.makeDiff(request, url, nextURL, function (err, res, diff) {
+        iter(err, diff);
+      });
+    }, callback);
   }
 };

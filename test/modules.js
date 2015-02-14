@@ -141,6 +141,20 @@ describe('handlers', function () {
       });
     });
   });
+
+  describe('replaceURLCalls', function () {
+    it('should replace url() calls in inline style definitions', function (done) {
+      var testURL = 'http://equalit.ie';
+      request(testURL, function (err, response, body) {
+        bundler.replaceURLCalls(request, body, testURL, function (err, diffs) {
+          should.not.exist(err);
+          should.exist(diffs);
+          Object.keys(diffs).length.should.be.greaterThan(0);
+          done();
+        });
+      });
+    });
+  });
 });
 
 describe('requests', function() {

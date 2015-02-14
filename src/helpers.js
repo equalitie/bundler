@@ -26,6 +26,7 @@ function dataURI(response, url, content) {
 
 function makeDiff(request, baseURL, resource, callback) {
   var resourceURL = urllib.resolve(baseURL, resource);
+  log.debug('in makeDiff, made resourceURL = %s', resourceURL);
   var options = { url: resourceURL, encoding: null };
   request(options, function (err, response, body) {
     if (err) {
@@ -38,6 +39,15 @@ function makeDiff(request, baseURL, resource, callback) {
       callback(null, response, diff);
     }
   });
+}
+
+function strReplaceAll(string, str1, str2) {
+  var index = string.indexOf(str1);
+  while (index >= 0) {
+    string = string.replace(str1, str2);
+    index = string.indexOf(str1, index);
+  }
+  return string;
 }
 
 function mimetype(url) {
@@ -58,6 +68,7 @@ module.exports = {
   dataURI: dataURI,
   mimetype: mimetype,
   makeDiff: makeDiff,
+  strReplaceAll: strReplaceAll,
 
   htmlFinder: function (source, selector, attr) {
     var $ = cheerio.load(source);
@@ -66,7 +77,6 @@ module.exports = {
         var $_this = $(this);
         var resource = $_this.attr(attr);
         if (typeof resource !== 'undefined') {
-          log.debug('Calling callback for handling selector %s', selector);
           callback(resource);
         }
       });
