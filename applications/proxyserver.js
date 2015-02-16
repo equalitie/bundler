@@ -44,7 +44,9 @@ _.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
 function extractHeaders(req, headers) {
 	var newHeaders = {};
 	for (var i = 0, len = headers.length; i < len; ++i) {
-		newHeaders[headers[i]] = req.headers[headers[i]];
+		if (req.headers.hasOwnProperty(headers[i])) {
+			newHeaders[headers[i]] = req.headers[headers[i]];
+		}
 	}
 	return newHeaders;
 }
@@ -54,16 +56,20 @@ function reverseProxy(remapper) {
 	var url = urllib.parse(options.url);
 	var hostname = url.hostname;
 	var resource = url.path;
+	var protocol = url.protocol;
 	if (!options.hasOwnProperty('headers')) {
 	  options.headers = {};
 	}
 	if (remapper.hasOwnProperty(hostname)) {
-	  options.url = urllib.resolve(remapper[hostname], resource);
+	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
 	  options.headers['Host'] = hostname;
 	}
 	next(null, options);
   };
 }
+
+var remapper = {"distributed.deflect.ca": "deflect.ca",
+               "nosmo.me": "fulltimeinter.net"};
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
@@ -88,9 +94,10 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalRequest', bundler.followRedirects(
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
-  bundleMaker.on('resourceRequest', reverseProxy(remaps));
-
   bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
+
+  bundleMaker.on('originalRequest', reverseProxy(remapper));
+  bundleMaker.on('resourceRequest', reverseProxy(remapper));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
