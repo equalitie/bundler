@@ -59,7 +59,6 @@ Bundler.prototype.bundle = function (callback) {
   var initOptions = { url: this.url };
   var thisBundler = this;
   async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
-    log.debug('in Bundler.send/async.reduce, memo =', memo);
     hook(memo, next);
   }, function (err, options) {
     if (err) {
@@ -94,7 +93,40 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         log.error('Failed to call a resource request hook. Error: %s', err.mesage);
         bundler.callback(err, null);
       } else {
+        options.encoding = null;
         request(options, callback);
+        /*
+        options.encoding = null;
+        request(options, function (err, response, body) {
+          if (err) {
+            log.error('Failed to call a resource response hook. Error: %s', err.message);
+            bundler.callback(err, null);
+          } else {
+            var contentType = response.headers['content-type'];
+            contentType = contentType ? contentType : response.headers['Content-Type'];
+            if (typeof contentType !== 'undefined' && contentType.indexOf('image') >= 0) {
+              callback(null, response, body);
+            } else {
+              body = body.toString();
+
+              async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
+                nextHook(wrappedRequest(bundler, response, body), body, memoDiffs, response, iterFn);
+              }, function (error, diffs) {
+                if (error) {
+                  log.error('Error calling resourceReceivedHooks; Error: %s', error.message);
+                  callback(error, response, body);
+                } else {
+                  log.debug('After calling resourceReceivedHooks, diffs = ', diffs);
+                  var newBody = helpers.applyDiffs(body, diffs);
+                  log.debug('newBody.length = ', newBody.length);
+                  callback(null, response, new Buffer(newBody));
+                }
+              });
+
+            }
+          }
+        });
+        */
       }
     });
   };
@@ -133,18 +165,10 @@ function handleDiffs(bundler, html, diffs) {
       bundler.callback(err, null);
     } else {
       log.info('Applying diffs to HTML.');
-      html = applyDiffs(html, newDiffs);
+      html = helpers.applyDiffs(html, newDiffs);
       bundler.callback(null, html);
     }
   });
-}
-
-function applyDiffs(string, diffs) {
-  var keys = Object.keys(diffs);
-  for (var i = 0, len = keys.length; i < len; ++i) {
-    string = helpers.strReplaceAll(string, keys[i], diffs[keys[i]]);
-  }
-  return string;
 }
 
 module.exports = {
