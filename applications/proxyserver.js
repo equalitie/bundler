@@ -90,7 +90,7 @@ function handleRequests(req, res) {
 
   bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
-  bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
+  //bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {

@@ -107,15 +107,13 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
               body = body.toString();
 
               async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
-                nextHook(wrappedRequest(bundler, response, body), body, memoDiffs, response, iterFn);
+                nextHook(wrappedRequest(bundler, response, body), options, body, memoDiffs, response, iterFn);
               }, function (error, diffs) {
                 if (error) {
                   log.error('Error calling resourceReceivedHooks; Error: %s', error.message);
                   callback(error, response, body);
                 } else {
-                  log.debug('After calling resourceReceivedHooks, diffs = ', diffs);
                   var newBody = helpers.applyDiffs(body, diffs);
-                  log.debug('newBody.length = ', newBody.length);
                   callback(null, response, new Buffer(newBody));
                 }
               });

@@ -118,7 +118,6 @@ module.exports = {
           i2--;
         }
         var uri = strReplaceAll(strReplaceAll(source.substring(index + 4, i2), '"', ''), '\'', '');
-        log.debug('Found uri %s', uri);
         index = source.indexOf('url(', index + 4);
         callback(uri);
       }
