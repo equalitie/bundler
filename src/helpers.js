@@ -12,6 +12,18 @@ var cheerio = require('cheerio');
 var mime = require('mime');
 var log = require('./logger');
 
+function dataURI(response, url, content) {
+  var encoded = content.toString('base64');
+  var ct = response.headers['Content-Type'];
+  if (typeof ct === 'undefined') {
+    ct = response.headers['content-type'];
+  }
+  if (typeof ct === 'undefined') {
+    ct = mimetype(url);
+  }
+  return 'data:' + ct + ';base64,' + encoded;
+}
+
 function makeDiff(request, baseURL, resource, callback) {
   var resourceURL = urllib.resolve(baseURL, resource);
   var options = { url: resourceURL, encoding: null };
@@ -25,7 +37,7 @@ function makeDiff(request, baseURL, resource, callback) {
         callback(err, response, {});
       }
     } else {
-      var datauri = dataURI(resourceURL, body);
+      var datauri = dataURI(response, resourceURL, body);
       var diff = {};
       diff[resource] = datauri;
       callback(null, response, diff);
@@ -33,9 +45,13 @@ function makeDiff(request, baseURL, resource, callback) {
   });
 }
 
-function dataURI(url, content) {
-  var encoded = content.toString('base64');
-  return 'data:' + mimetype(url) + ';base64,' + encoded;
+function strReplaceAll(string, str1, str2) {
+  var index = string.indexOf(str1);
+  while (index >= 0) {
+    string = string.replace(str1, str2);
+    index = string.indexOf(str1, index);
+  }
+  return string;
 }
 
 function mimetype(url) {
@@ -115,6 +131,8 @@ module.exports = {
     finder(function (resource) {
       elementHandlers.push(function (asynccallback) {
         makeDiff(request, url, resource, function (err, response, diff) {
+          // TODO - Implement post-resource hooks and call them here.
+          // What would they actually do?
           asynccallback(err, diff);
         });
       });

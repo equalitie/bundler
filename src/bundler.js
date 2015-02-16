@@ -94,9 +94,6 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         bundler.callback(err, null);
       } else {
         options.encoding = null;
-        request(options, callback);
-        /*
-        options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
             log.error('Failed to call a resource response hook. Error: %s', err.message);
@@ -126,7 +123,6 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
             }
           }
         });
-        */
       }
     });
   };

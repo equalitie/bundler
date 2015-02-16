@@ -13,6 +13,8 @@ var portNumber = 9008;
 
 var configFile = './psconfig.json';
 
+var remaps = {};
+
 var config = {
   // Proxy requests for documents and resources to another server
   "useProxy": false,
@@ -26,10 +28,12 @@ var config = {
   ],
   // A mapping of headers to values to write for them in requests.
   "spoofHeaders": {
-  }
+  },
+  "remapsFile": "./remaps.json"
 };
 
 _.extend(config, JSON.parse(fs.readFileSync(configFile)));
+_.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
 
 // Log to syslog when not running in verbose mode
 /* if (process.argv[2] != '-v') {
@@ -61,14 +65,13 @@ function reverseProxy(remapper) {
   };
 }
 
-var remapper = {};
-
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
 	var bundleMaker = new bundler.Bundler(url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
+  bundleMaker.on('originalReceived', bundler.replaceURLCalls);
 
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
@@ -85,7 +88,7 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalRequest', bundler.followRedirects(
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
-  bundleMaker.on('resourceRequest', reverseProxy(remapper));
+  bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
   bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
 

@@ -26,7 +26,7 @@ describe('helpers', function () {
 
   describe('dataURI', function () {
     it('should produce a data URI scheme for provided data', function () {
-      var duri = bundler.dataURI('image.png', new Buffer('hello'));
+      var duri = bundler.dataURI({headers: {}}, 'image.png', new Buffer('hello'));
       should.exist(duri);
       duri.should.be.exactly('data:image/png;base64,aGVsbG8=');
     });
@@ -91,12 +91,10 @@ describe('handlers', function () {
       var url = 'https://news.ycombinator.com';
       var options = { url: url };
       request(url, function (err, response, body) {
-        var $ = cheerio.load(body);
-        bundler.replaceImages($, url, options, function (err, diff) {
+        bundler.replaceImages(request, body, url, function (err, diff) {
           should.not.exist(err);
           should.exist(diff);
-          diff.should.have.property('y18.gif');
-          diff.should.have.property('s.gif');
+          Object.keys(diff).length.should.be.greaterThan(0);
           done();
         });
       });
@@ -108,8 +106,7 @@ describe('handlers', function () {
       var url = 'https://news.ycombinator.com';
       var options = { url: url };
       request(url, function (err, response, body) {
-        var $ = cheerio.load(body);
-        bundler.replaceCSSFiles($, url, options, function (err, diff) {
+        bundler.replaceCSSFiles(request, body, url, function (err, diff) {
           should.not.exist(err);
           should.exist(diff);
           Object.keys(diff).length.should.be.greaterThan(0);
@@ -124,11 +121,47 @@ describe('handlers', function () {
       var url = 'https://reddit.com';
       var options = { url: url };
       request(url, function (err, response, body) {
-        var $ = cheerio.load(body);
-        bundler.replaceJSFiles($, url, options, function (err, diff) {
+        bundler.replaceJSFiles(request, body, url, function (err, diff) {
           should.not.exist(err);
           should.exist(diff);
           Object.keys(diff).length.should.be.greaterThan(0);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('replaceLinks', function () {
+    it('should call a provided function to replace certain links', function (done) {
+      var originalURL = 'https://news.ycombinator.com';
+      request(originalURL, function (err, response, body) {
+        var linkCount = 0;
+        function replaceAllLinks(url, resource) {
+          linkCount++;
+          return '' + linkCount;
+        }
+        bundler.replaceLinks(replaceAllLinks)(request, body, originalURL, function (err, diffs) {
+          should.not.exist(err);
+          should.exist(diffs);
+          var keys = Object.keys(diffs);
+          should.exist(keys);
+          keys.should.have.property('length');
+          diffs[keys[0]].should.be.exactly('1');
+          diffs[keys[keys.length - 1]].should.be.exactly('' + linkCount);
+          done();
+        });
+      });
+    });
+  });
+
+  describe('replaceURLCalls', function () {
+    it('should replace url() calls in inline style definitions', function (done) {
+      var testURL = 'http://equalit.ie';
+      request(testURL, function (err, response, body) {
+        bundler.replaceURLCalls(request, body, testURL, function (err, diffs) {
+          should.not.exist(err);
+          should.exist(diffs);
+          Object.keys(diffs).length.should.be.greaterThan(0);
           done();
         });
       });
