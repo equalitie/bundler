@@ -9,6 +9,8 @@ module.exports = {
   bundleCSSRecursively: function (request, options, body, diffs, response, callback) {
     var ct = response.headers['content-type'];
     ct = ct ? ct : response.headers['Content-Type'];
+    log.debug('in bundleCSSRecursively, got content-type %s', ct);
+    log.debug('in bundleCSSRecursively, options = ', options);
     if (typeof ct !== 'undefined' && ct.indexOf('css') >= 0) {
       helpers.replaceAll(request, options.url, helpers.cssReferenceFinder(body), callback);
     } else {

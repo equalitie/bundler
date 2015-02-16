@@ -143,8 +143,6 @@ function invokeHandlers(bundler, originalDoc, requestFn) {
       bundler.callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
-      log.info('Got diffs for %s', bundler.url);
-      log.debug(Object.keys(diffs)[0]);
       handleDiffs(bundler, originalDoc, allDiffs);
     }
   });
