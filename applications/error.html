@@ -12,9 +12,10 @@
       border: none;
       height: 0.5px;
       background-color: #DDD;
-      width: 100%;
+      width: 760px;
       margin-top: 20px;
       margin-bottom: 20px;
+      margin-left:-30px;
     }
     div.center {
       text-align: center;
@@ -25,13 +26,23 @@
       margin-left: auto;
       margin-right: auto;
       width: 700px;
-      padding: 10px;
+      padding-top: 10px;
       padding-bottom: 30px;
+      padding-left: 30px;
+      padding-right: 30px;
       color: #333;
       box-shadow: 0px 3px 10px 0px #333;
     }
+    span.bold {
+      font-weight: bold;
+    }
+    span.italic {
+      font-style: italic;
+    }
     span.text {
-      padding: 20px;
+      padding-right: 30px;
+      padding-top: 20px;
+      padding-bottom: 20px;
     }
     span.colored {
       color: #6D9DD1;
@@ -40,16 +51,21 @@
       text-decoration: none;
       color: inherit;
     }
+    div#stack {
+      background-color: #efefef;
+      padding: 10px;
+      padding-left: 15px;
+    }
   </style>
 </head>
 <body>
   <div class="error">
-    <div class="center">
+    <div class="">
       <h1>We couldn't prepare your bundle!</h1>
-      <p id="url">You asked for {{url}}</p>
-      <p id="errormsg">Here's the error we got: {{error}}</p>
+      <p>You asked for <span id="url" class="bold">{{url}}</span></p>
+      <p>Here's the error we got: <span id="errormsg" class="italic">{{error}}</span></p>
       <h2>Maybe a stack trace will help?</h2>
-      <div>
+      <div id="stack">
         <code>
           {{stack}}
         </code>
@@ -61,8 +77,7 @@
   </div>
   <script type="text/javascript">
   document.getElementById('retry').addEventListener('click', function (event) {
-    var words = document.getElementById('url').innerHTML.split(' ');
-    var url = words[words.length - 1];
+    var url = document.getElementById('url').innerHTML;
     window.location.href = 'http://localhost:9008/?url=' + url;
   });
   document.getElementById('report').addEventListener('click', function (event) {
