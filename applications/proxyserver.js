@@ -53,18 +53,19 @@ function extractHeaders(req, headers) {
 
 function reverseProxy(remapper) {
   return function (options, next) {
-	var url = urllib.parse(options.url);
-	var hostname = url.hostname;
-	var resource = url.path;
-	var protocol = url.protocol;
-	if (!options.hasOwnProperty('headers')) {
-	  options.headers = {};
-	}
-	if (remapper.hasOwnProperty(hostname)) {
-	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
-	  options.headers['Host'] = hostname;
-	}
-	next(null, options);
+    console.log('###### OPTIONS = ', options);
+  	var url = urllib.parse(options.url);
+  	var hostname = url.hostname;
+  	var resource = url.path;
+  	var protocol = url.protocol;
+  	if (!options.hasOwnProperty('headers')) {
+  	  options.headers = {};
+  	}
+  	if (remapper.hasOwnProperty(hostname)) {
+  	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
+  	  options.headers['Host'] = hostname;
+  	}
+  	next(null, options);
   };
 }
 

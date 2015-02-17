@@ -56,22 +56,28 @@ Bundler.prototype.on = function (hookname, handler) {
 
 Bundler.prototype.bundle = function (callback) {
   this.callback = callback;
+  log.debug('in bundle, this.url = %s', this.url);
   var initOptions = {
       url: this.url,
       strictSSL: false,
       rejectUnauthorized: false
   };
   var thisBundler = this;
-  async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
-    hook(memo, next);
-  }, function (err, options) {
-    if (err) {
-      log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
-      this.callback(err, null);
-    } else {
-      makeBundle(thisBundler, options);
-    }
-  });
+  if (typeof this.url === 'undefined') {
+    callback(new Error('No URL provided to bundler.'), null);
+  } else {
+    async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
+      log.debug('Calling originalRequest hook with options ', memo);
+      hook(memo, next);
+    }, function (err, options) {
+      if (err) {
+        log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
+        this.callback(err, null);
+      } else {
+        makeBundle(thisBundler, options);
+      }
+    });
+  }
 }
 
 function makeBundle(bundler, options) {

@@ -136,7 +136,6 @@ module.exports = {
         });
       });
     });
-    log.info('Found %d resources in %s', elementHandlers.length, url);
     async.parallel(elementHandlers, function (err, diffs) {
       if (err) {
         callback(err, {});
