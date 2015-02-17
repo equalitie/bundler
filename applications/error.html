@@ -2,7 +2,6 @@
 <html>
 <head>
   <title>Bundling Error</title>
-  <link rel="stylesheet" type="text/css" href="style.css" />
   <style type="text/css">
     body {
       /* background-color: #3299BB; */
@@ -60,5 +59,15 @@
     <span id="retry" class="text"><a href="#">Retry</a></span>
     <span id="report" class="colored text"><a href="#">Report</a></span>
   </div>
+  <script type="text/javascript">
+  document.getElementById('retry').addEventListener('click', function (event) {
+    var words = document.getElementById('url').innerHTML.split(' ');
+    var url = words[words.length - 1];
+    window.location.href = 'http://localhost:9008/?url=' + url;
+  });
+  document.getElementById('report').addEventListener('click', function (event) {
+    alert('Not implemented yet, sorry!');
+  });
+  </script>
 </body>
 </html>
