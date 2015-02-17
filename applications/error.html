@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Bundling Error</title>
+  <link rel="stylesheet" type="text/css" href="style.css" />
+</head>
+<body>
+  <div class="error">
+    <h1>Failed to create bundle</h1>
+    <p id="url">Requested url: {{url}}</p>
+    <p id="errormsg">Error message: {{error}}</p>
+    <h2>Stack trace:</h2>
+    <div>
+      <code>
+        {{stack}}
+      </code>
+    </div>
+  </div>
+</body>
+</html>
