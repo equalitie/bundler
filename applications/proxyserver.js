@@ -72,6 +72,28 @@ function reverseProxy(remapper) {
 var remapper = {"distributed.deflect.ca": "deflect.ca",
                "nosmo.me": "fulltimeinter.net"};
 
+function renderErrorPage(req, res, error) {
+  var url = qs.parse(urllib.parse(req.url).query).url;
+  fs.readFile('./error.html', function (err, content) {
+    if (err) {
+      console.log('Could not read error.html; Error: ' + err.message);
+      res.writeHead(500, {'Content-Type': 'text/plain'});
+      res.write('An error occurred while trying to create a bundle for you.\n');
+      res.write('Requested url: ' + url + '\n');
+      res.write('The error provided says: ' + error.message + '\n');
+      res.end();
+    } else {
+      content = content.toString();
+      res.writeHead(500, {'Content-Type': 'text/html'});
+      content = content.replace('{{url}}', url);
+      content = content.replace('{{error}}', error.message);
+      content = content.replace('{{stack}}', error.stack);
+      res.write(content);
+      res.end();
+    }
+  });
+}
+
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
 	var bundleMaker = new bundler.Bundler(url);
@@ -104,7 +126,7 @@ function handleRequests(req, res) {
 		if (err) {
 			console.log('Failed to create bundle for ' + req.url);
 			console.log('Error: ' + err.message);
-      res.end();
+      renderErrorPage(req, res, err);
 		} else {
 			res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
 			res.write(bundle);

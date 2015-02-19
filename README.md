@@ -29,13 +29,29 @@ bundleMaker.bundle(function (err, bundle) {
 });
 ```
 
-Currently, there are three resource handlers exported in the bundler module:
+Currently, there are five resource handlers exported in the bundler module:
 
 1. replaceImages
 2. replaceCSSFiles
 3. replaceJSFiles
+4. replaceLinks
+5. replaceURLCalls
 
-which all do exactly what you would expect.
+The first three are pretty straightforward. You register all of them the same way (like in the example of `repaceImages` above).
+
+`replaceLinks` accepts a function that will be called to generate new links.  The signature of this function is
+
+```javascript
+function linkReplacer(baseURL, resourceURL) {
+  return combine(baseURL, resourceURL);
+}
+```
+
+Here, you are free to define how you combine the baseURL and resourceURL as long as you return the value at the end.
+
+For example, you might register a link replacer to transform all urls to the form "http://localhost:9001?url=URL".
+
+`replaceURLCalls` does not accept any parameters.  It will search through the inline `style` attributes of tags and bundle the resources referenced in the CSS `url()` function.
 
 More on writing your own resource handlers in the *Writing Your Own Hooks*
 section below.
@@ -126,6 +142,8 @@ using the `originalReceived` event. Bundler currently exports the following hand
 1. replaceImages
 2. replaceCSSFiles
 3. replaceJSFiles
+4. replaceLinks
+5. replaceURLCalls
 
 ## Before fetching each resource
 
@@ -156,7 +174,8 @@ handlers written for `originalRequest` here.
 Bundler allows hooks to be registered to directly manipulate the body of a fetched resource through the `resourceReceived` event.  Currently no 
 handlers are exported directly by bundler for these events.
 
-**Currently no special handlers are implemented here**
+Currently there is one function exported by bundler to operate on retrieved resources. This is the `bundleCSSRecursively` function, which takes no arguments to use.  It will find instances of calls to `url()` in CSS documents
+and replace the URL within with a data URI.
 
 ## After building data URIs
 
@@ -235,9 +254,9 @@ bundleMaker.bundle(function (err, bundle) {
 Handlers for replacing resources in a document, like `bundler.replaceImages` can also be supplied to the bundler.  Such functions have the following form.
 
 ```javascript
-function handlerName(request, $, url, callback) {
-  var element = $('some-selector');
-  request({url: element.attr('some-attr')}, function (err, response, body) {
+function handlerName(request, originalDoc, url, callback) {
+  var resourceURL = findResourceURL(originalDoc);
+  request({url: resourceURL}, function (err, response, body) {
     // produce a diff object
     var diff = { 'source-url': 'replacement' };
     callback(errorIfAny, diff);
@@ -246,11 +265,11 @@ function handlerName(request, $, url, callback) {
 ```
 
 The `request` parameter is a wrapper around the [request](https://github.com/request) function that will invoke all hooks inserted via `resourceRequest`
-to modify the `options` object before making the request. It accepts an  
+and `resourceRetrieved`
+to modify the `options` object and to produce diffs for the resource before and after making the request. It accepts an  
 `options` parameter (or resource URL) and a callback to handle the response.
 
-The `$` parameter is the [Cheerio](https://github.com/cheeriojs/cheerio) object
-containing the document fetched by the original request.
+The `originalDoc` parameter contains the document fetched by the original request.
 
 The `url` parameter is the URL originally requested, used to produce resolved
 paths to discovered resources.
@@ -273,10 +292,7 @@ function handlerName(options, callback, originalDocument, response) {
 }
 ```
 
-You will notice that this form is very similar to that of the handler described above.
-This is intentional.  The signature for these handlers is a little unusual looking
-(having the `callback` before `$` and `response` arguments), however this is done so
-that the same handlers written for `originalRequest` can be reused here.
+You can reuse hooks for the `originalRequest` event here.
 
 The `options` and `callback` arguments here are the same as they are for the
 `originalRequest` handlers.
@@ -287,7 +303,7 @@ fetched document.
 The `response` argument is the response object provided by the call to `request` 
 for the original document, which is an instance of
 [http.IncomingMessage](http://nodejs.org/api/http.html#http_http_incomingmessage).
-This may be useful for obtaining response headers or the status code.
+This may be useful for obtaining response headers and the status code.
 
 For example, you could set the Referer header of the resource request to the
 value of the Host header in the response.
@@ -316,11 +332,23 @@ Bundler allows hooks to be registered to directly manipulate the body of a fetch
 the following signature.
 
 ```javascript
-function handlerName(requestFn, body, response, callback) {
-  // Do something with resource body
-  callback(err, body);
+function handlerName(requestFn, options, body, diffs, response, callback) {
+  // Make a diff object for the resource body
+  callback(err, diff);
 }
 ```
+
+`requestFn` is a wrapper around the `request` library's exported function and can be used to fetch resources.
+
+`options` is the options object passed to the request made to fetch the resource for which the `resourceReceived` event was triggered.
+
+`body` contains the string contents of the resource in question.
+
+`diffs` is a diff object containing the diffs for the resource assembled by previously-invoked hooks.
+
+`response` contains the response object corresponding to the request for the resource in question.
+
+`callback` is the `async.reduce` callback and must be invoked with any error that might have occurred (or null) and the new diff object to pass onto the next hook.
 
 ## After building data URIs
 
@@ -377,30 +405,34 @@ bundleMaker.bundle(function (err, bundle) {
 To make writing handlers and hooks a little bit easier, Bundler exports the
 following functions.
 
-## bundler.mimetype
+## bundler.mimetype(url)
 
-```javascript
-bundler.mimetype('/stylesheets/hello.css?hello=world');
-// -> 'text/css'
+Infers, where possible, the mimetype of a resource based on its URL.  It is better to determine this information from the Content-Type header in a response, however this function is provided as a useful helper.
 
-bundler.mimetype('image.png');
-// -> 'image/png'
-```
+## bundler.dataURI(response, baseURL, content)
 
-## bundler.dataURI
+Produces the data URI for a resource given the response object corresponding to the request for the resource, the base URL (e.g. www.google.com) for the resource, and the content of the resource as a [Buffer obect](http://nodejs.org/api/buffer.html).
 
-```javascript
-bundler.dataURI('test.css', new Buffer('h1 {  color: red; }'));
-// -> 'data:text/css;base64,aDEgeyAgY29sb3I6IHJlZDsgfQ=='
+## bundler.strReplaceAll(string, str1, str2)
 
-bundler.dataURI('https://site.com/awesome/code.js', new Buffer('alert("Hello world");'));
-// -> 'data:application/javascript;base64,YWxlcnQoIkhlbGxvIHdvcmxkIik7'
-```
+Replaces all instances of `str1` in `string` with `str2`.
 
-# Testing
+## bundler.applyDiffs(string, diffs)
 
-To run the module test script, simply run the command
+Applies all the replacements provided by a diff object to a given string.
+For example, the string `"abc"` with diff `{'c': 'd'}` would become `"abd"`.
 
-    npm test
+## bundler.htmlFinder(source, selector, attr)
 
-from the project root folder.
+Returns a function that accepts a callback. Will scan through an HTML document 
+`source` and invoke the callback with the value of the attribute of each element obtained using the provided selector. This works using the 
+[Cheerio](https://github.com/cheeriojs/cheerio) library, so selectors should be supplied accordingly.
+
+## bundler.cssReferenceFinder(source)
+
+Like `htmlFinder`, will return a function that accepts a callback.  The callback will be invoked with the URL found within all instances of calls to 
+`url()` in the CSS document `source` provided.
+
+## bundler.replaceAll(request, url, finder, callback)
+
+Uses a finder (the callback-accepting function provided by a call to either `htmlFinder` or `cssReferenceFinder`) to identify and request resources. The `url` argument must be the URL of the original document (e.g. www.google.com). The callback will be invoked with any error that occurs (or null) and a diff object.
