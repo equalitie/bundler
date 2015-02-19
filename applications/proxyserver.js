@@ -5,6 +5,7 @@ var http = require('http');
 var fs = require('fs');
 var urllib = require('url');
 var qs = require('querystring');
+var nodeConstants = require('constants');
 var _ = require('lodash');
 var bundler = require('../src/bundler');
 
@@ -41,6 +42,9 @@ _.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
  * }
  */
 
+// Allow self-signed certs of all shapes and sizes.
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+
 function extractHeaders(req, headers) {
 	var newHeaders = {};
 	for (var i = 0, len = headers.length; i < len; ++i) {
@@ -53,7 +57,6 @@ function extractHeaders(req, headers) {
 
 function reverseProxy(remapper) {
   return function (options, next) {
-    console.log('###### OPTIONS = ', options);
   	var url = urllib.parse(options.url);
   	var hostname = url.hostname;
   	var resource = url.path;
@@ -64,13 +67,15 @@ function reverseProxy(remapper) {
   	if (remapper.hasOwnProperty(hostname)) {
   	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
   	  options.headers['Host'] = hostname;
+      if (!options.hasOwnProperty('agentOptions')) {
+        options.agentOptions = {};
+      }
+      options.agentOptions.secureOptions = nodeConstants.SSL_OP_NO_TLSv1_2;
   	}
+    console.log('###### OPTIONS = ', options);
   	next(null, options);
   };
 }
-
-var remapper = {"distributed.deflect.ca": "deflect.ca",
-               "nosmo.me": "fulltimeinter.net"};
 
 function renderErrorPage(req, res, error) {
   var url = qs.parse(urllib.parse(req.url).query).url;
@@ -119,8 +124,8 @@ function handleRequests(req, res) {
 
   bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
 
-  bundleMaker.on('originalRequest', reverseProxy(remapper));
-  bundleMaker.on('resourceRequest', reverseProxy(remapper));
+  bundleMaker.on('originalRequest', reverseProxy(remaps));
+  bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
 	bundleMaker.bundle(function (err, bundle) {
 		if (err) {
