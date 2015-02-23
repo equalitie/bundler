@@ -88,7 +88,7 @@ function renderErrorPage(req, res, error) {
       res.write('The error provided says: ' + error.message + '\n');
       res.end();
     } else {
-      if !(res.finished) {
+      if (!res.finished) {
           content = content.toString();
           res.writeHead(500, {'Content-Type': 'text/html'});
           content = content.replace('{{url}}', url);
@@ -103,6 +103,7 @@ function renderErrorPage(req, res, error) {
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
+  var ping = qs.parse(urllib.parse(req.url).query).ping;
 	var bundleMaker = new bundler.Bundler(url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
@@ -129,17 +130,24 @@ function handleRequests(req, res) {
   bundleMaker.on('originalRequest', reverseProxy(remaps));
   bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
+    if (ping) {
+        res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+        res.write("OK");
+        res.end();
+    } else {
+
 	bundleMaker.bundle(function (err, bundle) {
-		if (err) {
-			console.log('Failed to create bundle for ' + req.url);
-			console.log('Error: ' + err.message);
-      renderErrorPage(req, res, err);
-		} else {
-			res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-			res.write(bundle);
-			res.end();
-		}
+	    if (err) {
+		console.log('Failed to create bundle for ' + req.url);
+		console.log('Error: ' + err.message);
+                renderErrorPage(req, res, err);
+	    } else {
+		res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+		res.write(bundle);
+		res.end();
+	    }
 	});
+    }
 }
 
 http.createServer(handleRequests).listen(portNumber, listenAddress, function() {
