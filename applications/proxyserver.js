@@ -88,13 +88,15 @@ function renderErrorPage(req, res, error) {
       res.write('The error provided says: ' + error.message + '\n');
       res.end();
     } else {
-      content = content.toString();
-      res.writeHead(500, {'Content-Type': 'text/html'});
-      content = content.replace('{{url}}', url);
-      content = content.replace('{{error}}', error.message);
-      content = content.replace('{{stack}}', error.stack);
-      res.write(content);
-      res.end();
+      if !(res.finished) {
+          content = content.toString();
+          res.writeHead(500, {'Content-Type': 'text/html'});
+          content = content.replace('{{url}}', url);
+          content = content.replace('{{error}}', error.message);
+          content = content.replace('{{stack}}', error.stack);
+          res.write(content);
+          res.end();
+      }
     }
   });
 }
