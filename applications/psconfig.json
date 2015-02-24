@@ -3,6 +3,8 @@
 	"drop_user": "nobody",
 	"drop_group": "nogroup",
 	"proxyAddress": "localhost:9008",
+	"listenAddress": "127.0.0.1",
+	"listenPort": 9008,
 	"followFirstRedirect": true,
 	"followAllRedirects": false,
 	"redirectLimit": 10,
