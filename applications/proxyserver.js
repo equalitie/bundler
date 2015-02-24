@@ -7,10 +7,9 @@ var urllib = require('url');
 var qs = require('querystring');
 var nodeConstants = require('constants');
 var _ = require('lodash');
-var bundler = require('../src/bundler');
+var parseArgs = require('minimist');
 
-var listenAddress = "127.0.0.1";
-var portNumber = 9008;
+var bundler = require('../src/bundler');
 
 var configFile = './psconfig.json';
 
@@ -22,6 +21,8 @@ var config = {
   "proxyAddress": "",
   "followFirstRedirect": true,
   "followAllRedirects": false,
+  "listenPort": 9008,
+  "listenAddress": "127.0.0.1",
   "redirectLimit": 10,
   // Headers to clone from the original request sent by the user.
   // See http://nodejs.org/api/http.html#http_message_headers
@@ -33,8 +34,15 @@ var config = {
   "remapsFile": "./remaps.json"
 };
 
+var argv = parseArgs(process.argv.slice(2));
+if (argv.config) {
+    console.log("Loading config file from %s", argv.config)
+    configFile = argv.config
+}
+
 _.extend(config, JSON.parse(fs.readFileSync(configFile)));
 _.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
+
 
 // Log to syslog when not running in verbose mode
 /* if (process.argv[2] != '-v') {
@@ -84,19 +92,22 @@ function renderErrorPage(req, res, error) {
       res.write('The error provided says: ' + error.message + '\n');
       res.end();
     } else {
-      content = content.toString();
-      res.writeHead(500, {'Content-Type': 'text/html'});
-      content = content.replace('{{url}}', url);
-      content = content.replace('{{error}}', error.message);
-      content = content.replace('{{stack}}', error.stack);
-      res.write(content);
-      res.end();
+      if (!res.finished) {
+          content = content.toString();
+          res.writeHead(500, {'Content-Type': 'text/html'});
+          content = content.replace('{{url}}', url);
+          content = content.replace('{{error}}', error.message);
+          content = content.replace('{{stack}}', error.stack);
+          res.write(content);
+          res.end();
+      }
     }
   });
 }
 
 function handleRequests(req, res) {
   var url = qs.parse(urllib.parse(req.url).query).url;
+  var ping = qs.parse(urllib.parse(req.url).query).ping;
 	var bundleMaker = new bundler.Bundler(url);
 	bundleMaker.on('originalReceived', bundler.replaceImages);
 	bundleMaker.on('originalReceived', bundler.replaceJSFiles);
@@ -123,20 +134,27 @@ function handleRequests(req, res) {
   bundleMaker.on('originalRequest', reverseProxy(remaps));
   bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
+    if (ping) {
+        res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+        res.write("OK");
+        res.end();
+    } else {
+
 	bundleMaker.bundle(function (err, bundle) {
-		if (err) {
-			console.log('Failed to create bundle for ' + req.url);
-			console.log('Error: ' + err.message);
-      renderErrorPage(req, res, err);
-		} else {
-			res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
-			res.write(bundle);
-			res.end();
-		}
+	    if (err) {
+		console.log('Failed to create bundle for ' + req.url);
+		console.log('Error: ' + err.message);
+                renderErrorPage(req, res, err);
+	    } else {
+		res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
+		res.write(bundle);
+		res.end();
+	    }
 	});
+    }
 }
 
-http.createServer(handleRequests).listen(portNumber, listenAddress, function() {
+http.createServer(handleRequests).listen(config.listenPort, config.listenAddress, function() {
 	//Drop privileges if running as root
 	if (process.getuid() === 0) {
 	console.log("Dropping privileges");
@@ -144,4 +162,4 @@ http.createServer(handleRequests).listen(portNumber, listenAddress, function() {
 		process.setuid(config.drop_user);
 	}
 });
-console.log('Proxy server listening on ' + listenAddress + ":" + portNumber);
+console.log('Proxy server listening on ' + config.listenAddress + ":" + config.listenPort);
