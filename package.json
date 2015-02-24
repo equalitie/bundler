@@ -14,7 +14,8 @@
     "async": "latest",
     "lodash": "latest",
     "mime": "latest",
-    "cheerio": "latest"
+    "cheerio": "latest",
+    "minimist": "latest",
   },
   "devDependencies": {
     "mocha": "latest",
