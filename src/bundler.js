@@ -56,7 +56,6 @@ Bundler.prototype.on = function (hookname, handler) {
 
 Bundler.prototype.bundle = function (callback) {
   this.callback = callback;
-  log.debug('in bundle, this.url = %s', this.url);
   var initOptions = {
       url: this.url,
       strictSSL: false,
