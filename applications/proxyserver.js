@@ -8,6 +8,7 @@ var qs = require('querystring');
 var nodeConstants = require('constants');
 var _ = require('lodash');
 var parseArgs = require('minimist');
+var path = require('path');
 
 var bundler = require('../src/bundler');
 
@@ -28,6 +29,8 @@ var config = {
   // See http://nodejs.org/api/http.html#http_message_headers
   "cloneHeaders": [
   ],
+  "logDir": ".",
+  "htmlDir": ".",
   // A mapping of headers to values to write for them in requests.
   "spoofHeaders": {
   },
@@ -87,7 +90,7 @@ function reverseProxy(remapper) {
 
 function renderErrorPage(req, res, error) {
   var url = qs.parse(urllib.parse(req.url).query).url;
-  fs.readFile('./error.html', function (err, content) {
+  fs.readFile(path.join(config.htmlDir, 'error.html'), function (err, content) {
     if (err) {
       console.log('Could not read error.html; Error: ' + err.message);
       res.writeHead(500, {'Content-Type': 'text/plain'});
