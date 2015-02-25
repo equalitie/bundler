@@ -117,6 +117,9 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
   bundleMaker.on('originalReceived', bundler.replaceURLCalls);
 
+  bundleMaker.on('originalRequest', reverseProxy(remaps));
+  bundleMaker.on('resourceRequest', reverseProxy(remaps));
+
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
 		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
@@ -133,9 +136,6 @@ function handleRequests(req, res) {
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
   bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
-
-  bundleMaker.on('originalRequest', reverseProxy(remaps));
-  bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
     if (ping) {
         res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
