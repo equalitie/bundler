@@ -8,6 +8,7 @@ var qs = require('querystring');
 var nodeConstants = require('constants');
 var _ = require('lodash');
 var parseArgs = require('minimist');
+var path = require('path');
 
 var bundler = require('../src/bundler');
 
@@ -28,6 +29,8 @@ var config = {
   // See http://nodejs.org/api/http.html#http_message_headers
   "cloneHeaders": [
   ],
+  "logDir": ".",
+  "htmlDir": ".",
   // A mapping of headers to values to write for them in requests.
   "spoofHeaders": {
   },
@@ -81,7 +84,7 @@ function reverseProxy(remapper) {
 
 function renderErrorPage(req, res, error) {
   var url = qs.parse(urllib.parse(req.url).query).url;
-  fs.readFile('./error.html', function (err, content) {
+  fs.readFile(path.join(config.htmlDir, 'error.html'), function (err, content) {
     if (err) {
       res.writeHead(500, {'Content-Type': 'text/plain'});
       res.write('An error occurred while trying to create a bundle for you.\n');
@@ -111,6 +114,9 @@ function handleRequests(req, res) {
 	bundleMaker.on('originalReceived', bundler.replaceCSSFiles);
   bundleMaker.on('originalReceived', bundler.replaceURLCalls);
 
+  bundleMaker.on('originalRequest', reverseProxy(remaps));
+  bundleMaker.on('resourceRequest', reverseProxy(remaps));
+
 	if (config.useProxy) {
 		bundleMaker.on('originalRequest', bundler.proxyTo(config.proxyAddress));
 		bundleMaker.on('resourceRequest', bundler.proxyTo(config.proxyAddress));
@@ -127,9 +133,6 @@ function handleRequests(req, res) {
 		config.followFirstRedirect, config.followAllRedirects, config.redirectLimit));
 
   bundleMaker.on('resourceReceived', bundler.bundleCSSRecursively);
-
-  bundleMaker.on('originalRequest', reverseProxy(remaps));
-  bundleMaker.on('resourceRequest', reverseProxy(remaps));
 
     if (ping) {
         res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
