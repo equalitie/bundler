@@ -1,5 +1,4 @@
 var helpers = require('./helpers');
-var log = require('./logger');
 
 module.exports = {
   /* resourceRequest handlers */

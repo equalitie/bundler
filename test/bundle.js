@@ -2,7 +2,6 @@ var should = require('should');
 var request = require('request');
 var cheerio = require('cheerio');
 var bundler = require('../src/bundler');
-var log = require('../src/logger');
 
 var testURL = 'https://en.wikipedia.org/wiki/Data_URI_scheme';
 
@@ -12,7 +11,7 @@ describe('bundler', function () {
     var bundleMaker = new bundler.Bundler('https://news.ycombinator.com');
 
     bundleMaker.on('originalRequest', bundler.stripHeaders(['Origin', 'Host']));
-    
+
     bundleMaker.on('originalRequest', function (options, callback) {
       should.exist(options);
       options.should.have.property('headers');
@@ -61,12 +60,14 @@ describe('bundler', function () {
     var called = false;
     var bundleMaker = new bundler.Bundler('https://news.ycombinator.com');
 
-    bundleMaker.on('resourceReceived', function (requestFn, body, response, next) {
+    bundleMaker.on('resourceReceived', function (request, options, body, diffs, response, callback) {
       called = true;
-      should.exist(requestFn);
+      should.exist(request);
+      should.exist(options);
       should.exist(body);
+      should.exist(diffs);
       should.exist(response);
-      next(null, body);
+      callback(null, body);
     });
 
     bundleMaker.on('originalReceived', bundler.replaceImages);

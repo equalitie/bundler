@@ -18,7 +18,6 @@ var handlers = require('./handlers');
 var resources = require('./resources');
 var diffs = require('./diffs');
 var helpers = require('./helpers');
-var log = require('./logger');
 
 function Bundler(url) {
   this.url = url;
@@ -48,8 +47,6 @@ Bundler.prototype.on = function (hookname, handler) {
   case 'diffsReceived':
     this.diffHooks.push(handler);
     break;
-  default:
-    log.error('No hook with the name %s exists.', hookname);
   }
   return this;
 };
@@ -66,11 +63,9 @@ Bundler.prototype.bundle = function (callback) {
     callback(new Error('No URL provided to bundler.'), null);
   } else {
     async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
-      log.debug('Calling originalRequest hook with options ', memo);
       hook(memo, next);
     }, function (err, options) {
       if (err) {
-        log.error('Error calling pre-initial-request hooks; Error: %s', err.message);
         this.callback(err, null);
       } else {
         makeBundle(thisBundler, options);
@@ -82,7 +77,6 @@ Bundler.prototype.bundle = function (callback) {
 function makeBundle(bundler, options) {
   request(options, function (err, res, body) {
     if (err) {
-      log.error('Error making request to %s; Error: %s %s', bundler.url, err.stack, err.message);
       bundler.callback(err, null);
     } else {
       invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
@@ -99,13 +93,11 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
       hook(memo, next, originalBody, originalResponse);
     }, function (err, options) {
       if (err) {
-        log.error('Failed to call a resource request hook. Error: %s', err.mesage);
         bundler.callback(err, null);
       } else {
         options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
-            log.error('Failed to call a resource response hook. Error: %s', err.message);
             bundler.callback(err, null);
           } else {
             var contentType = response.headers['content-type'];
@@ -119,7 +111,6 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
                 nextHook(wrappedRequest(bundler, response, body), options, body, memoDiffs, response, iterFn);
               }, function (error, diffs) {
                 if (error) {
-                  log.error('Error calling resourceReceivedHooks; Error: %s', error.message);
                   callback(error, response, body);
                 } else {
                   var newBody = helpers.applyDiffs(body, diffs);
@@ -148,7 +139,6 @@ function invokeHandlers(bundler, originalDoc, requestFn) {
   }
   async.parallel(handlers, function (err, diffs) {
     if (err) {
-      log.error('Error calling resource handler; Error: %s', err.message);
       bundler.callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
@@ -162,10 +152,8 @@ function handleDiffs(bundler, html, diffs) {
     hook(memo, next);
   }, function (err, newDiffs) {
     if (err) {
-      log.error('Error calling post-resources hooks; Error: %s', err.message);
       bundler.callback(err, null);
     } else {
-      log.info('Applying diffs to HTML.');
       html = helpers.applyDiffs(html, newDiffs);
       bundler.callback(null, html);
     }

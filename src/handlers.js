@@ -12,7 +12,6 @@
 
 var async = require('async');
 var urllib = require('url');
-var log = require('./logger');
 var helpers = require('./helpers');
 
 module.exports = {

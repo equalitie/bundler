@@ -10,7 +10,6 @@ var async = require('async');
 var _ = require('lodash');
 var cheerio = require('cheerio');
 var mime = require('mime');
-var log = require('./logger');
 
 function dataURI(response, url, content) {
   var encoded = content.toString('base64');
@@ -29,11 +28,9 @@ function makeDiff(request, baseURL, resource, callback) {
   var options = { url: resourceURL, encoding: null };
   request(options, function (err, response, body) {
     if (err) {
-      log.error('Failed to fetch %s. Error: %s', resourceURL, err.message);
       if (err.message.substring(0, 11) === 'Invalid URI') {
         callback(null, response, {});
       } else {
-        log.info('Ignoring invalid URL to simply pass resource on as is');
         callback(err, response, {});
       }
     } else {

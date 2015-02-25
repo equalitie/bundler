@@ -36,8 +36,7 @@ var config = {
 
 var argv = parseArgs(process.argv.slice(2));
 if (argv.config) {
-    console.log("Loading config file from %s", argv.config)
-    configFile = argv.config
+    configFile = argv.config;
 }
 
 _.extend(config, JSON.parse(fs.readFileSync(configFile)));
@@ -76,7 +75,6 @@ function reverseProxy(remapper) {
   	  options.url = urllib.resolve(protocol + '//' + remapper[hostname], resource);
   	  options.headers['Host'] = hostname;
   	}
-    console.log('###### OPTIONS = ', options);
   	next(null, options);
   };
 }
@@ -85,7 +83,6 @@ function renderErrorPage(req, res, error) {
   var url = qs.parse(urllib.parse(req.url).query).url;
   fs.readFile('./error.html', function (err, content) {
     if (err) {
-      console.log('Could not read error.html; Error: ' + err.message);
       res.writeHead(500, {'Content-Type': 'text/plain'});
       res.write('An error occurred while trying to create a bundle for you.\n');
       res.write('Requested url: ' + url + '\n');
@@ -142,8 +139,6 @@ function handleRequests(req, res) {
 
 	bundleMaker.bundle(function (err, bundle) {
 	    if (err) {
-		console.log('Failed to create bundle for ' + req.url);
-		console.log('Error: ' + err.message);
                 renderErrorPage(req, res, err);
 	    } else {
 		res.writeHead(200, {'Content-Type': 'text/html; charset=utf-8'});
@@ -157,9 +152,8 @@ function handleRequests(req, res) {
 http.createServer(handleRequests).listen(config.listenPort, config.listenAddress, function() {
 	//Drop privileges if running as root
 	if (process.getuid() === 0) {
-	console.log("Dropping privileges");
 		process.setgid(config.drop_group);
 		process.setuid(config.drop_user);
 	}
 });
-console.log('Proxy server listening on ' + config.listenAddress + ":" + config.listenPort);
+//console.log('Proxy server listening on ' + config.listenAddress + ":" + config.listenPort);

@@ -10,7 +10,6 @@
  */
 
 var _ = require('lodash');
-var log = require('./logger');
 
 module.exports = {
   stripHeaders: function (headers) {
@@ -49,5 +48,5 @@ module.exports = {
       options.maxRedirects = limit;
       callback(null, options);
     };
-  },
+  }
 };
