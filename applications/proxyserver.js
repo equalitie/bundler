@@ -54,7 +54,7 @@ _.extend(remaps, JSON.parse(fs.readFileSync(config.remapsFile)));
  */
 
 // Allow self-signed certs of all shapes and sizes.
-process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0"
+process.env.NODE_TLS_REJECT_UNAUTHORIZED = "0";
 
 function extractHeaders(req, headers) {
 	var newHeaders = {};
@@ -76,12 +76,8 @@ function reverseProxy(remapper) {
   	  options.headers = {};
   	}
   	if (remapper.hasOwnProperty(hostname)) {
-  	  options.url = urllib.resolve(protocol + "//" + remapper[hostname], resource);
+  	  options.url = urllib.resolve(protocol + '//' + remapper[hostname], resource);
   	  options.headers['Host'] = hostname;
-      if (!options.hasOwnProperty('agentOptions')) {
-        options.agentOptions = {};
-      }
-      options.agentOptions.secureOptions = nodeConstants.SSL_OP_NO_TLSv1_2;
   	}
     console.log('###### OPTIONS = ', options);
   	next(null, options);
