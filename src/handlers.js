@@ -11,11 +11,14 @@
  */
 
 var async = require('async');
+var log = require('winston');
 var urllib = require('url');
 var helpers = require('./helpers');
 
 module.exports = {
   replaceImages: function (request, originalDoc, url, callback) {
+    log.info('Replacing images');
+    log.error('test');
     helpers.replaceAll(request, url, helpers.htmlFinder(originalDoc, 'img', 'src'), callback);
   },
 

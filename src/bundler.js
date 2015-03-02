@@ -8,6 +8,7 @@
 
 var _ = require('lodash');
 var async = require('async');
+var winston = require('winston');
 var request = require('request');
 var cheerio = require('cheerio');
 var urllib = require('url');
@@ -18,6 +19,7 @@ var handlers = require('./handlers');
 var resources = require('./resources');
 var diffs = require('./diffs');
 var helpers = require('./helpers');
+var log = require('./logger');
 
 function Bundler(url) {
   this.url = url;
@@ -160,8 +162,18 @@ function handleDiffs(bundler, html, diffs) {
   });
 }
 
+function configureLogger(options) {
+  if (options.hasOwnProperty('allowConsole') && !options.allowConsole) {
+    winston.remove(winston.transports.Console);
+  }
+  if (options.hasOwnProperty('allowInfoFile') && !options.allowInfoFile) {
+    winston.remove('infoFile');
+  }
+}
+
 module.exports = {
-  Bundler: Bundler
+  Bundler: Bundler,
+  configureLogger: configureLogger
 };
 
 _.extend(module.exports, helpers);
