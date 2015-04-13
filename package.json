@@ -1,21 +1,20 @@
 {
-  "name": "bundler",
+  "name": "equalitie-bundler",
   "description": "A utility for inlining resources used by web pages using data URI schemes",
-  "version": "0.1.0",
+  "version": "1.1.0",
   "engines": ">= 0.10.0",
   "author": "Zack Mullaly <redwire@riseup.net>",
   "main": "./src/bundler.js",
   "scripts": {
     "test": "mocha -t 20000 test/*.js"
   },
+  "readmeFilename": "README.md",
   "dependencies": {
-    "winston": "latest",
     "request": "latest",
     "async": "latest",
     "lodash": "latest",
     "mime": "latest",
-    "cheerio": "latest",
-    "minimist": "latest"
+    "cheerio": "latest"
   },
   "devDependencies": {
     "mocha": "latest",
