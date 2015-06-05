@@ -17,11 +17,16 @@ module.exports = {
    * returns true.
    */
   predicated: function (predicate, handler) {
+    console.log('Predicate');
+    console.log(predicate.toString());
     return function (request, originalDoc, url, callback) {
+      console.log('URL = ' + url);
       if (predicate(originalDoc, url)) {
+        console.log('Predicate passed!');
         handler(request, originalDoc, url, callback);
       } else {
         // Continue down the chain of handlers.
+        console.log('Predicate failed');
         callback(null, {});
       }
     };

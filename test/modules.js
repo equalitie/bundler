@@ -169,35 +169,24 @@ describe('handlers', function () {
 
   describe('predicated', function () {
     it('should only make replacements if a provided predicate passes', function (done) {
-      var url = 'https://news.ycombinator.com';
-      request(url, function (err, response, body) {
-        bundler.predicated(function (doc, resourceURL) {
-          return true; 
-        }, function (request, body, url, function (err, diff) {
-          bundler.replaceImages(request, body, url, function (err, diff) {
-            should.not.exist(err);
-            should.exist(diff);
-            Object.keys(diff).length.should.be.greaterThan(0);
-            done();
-          });
-        }));
-      });
+      bundler.predicated(function (doc, resourceURL) {
+        return true;
+      }, function (request, body, url, done) {
+        should.exist(request);
+        should.exist(body);
+        should.exist(url);
+        done();
+      })('request placeholder', 'body placeholder', 'test url', done);
     });
 
-    it('should not make any replacements if the predicate fails', function (done) {
-      var url = 'http://news.ycombinator.com';
-      request(url, function (err, response, body) {
-        bundler.predicated(function (doc, resourceURL) {
-          return false;
-        }, function (request, body, url, function (err, diff) {
-          bundler.replaceImages(request, body, url, function (err, diff) {
-            // We will never make it here
-            console.log('Predicated called handler despite predicate failing.');
-            1.should.be.exactly(2); // Make an assertion that will fail
-          });
-          should.not.exist(err); // Predicated does not set an error
-        }));
-      });
+    it('should not call the provided handler if the predicate fails', function (done) {
+      bundler.predicated(function (doc, resourceURL) {
+        return false;
+      }, function (request, body, url, done) {
+        should(1).be.exactly(2); // We should never get here, so fail if we do.  
+      })('request placeholder', 'body placeholder', 'test url', done);
+      // Wait a second to make sure the handler function provided to predicated is not called.
+      setTimeout(done, 1000);
     });
   });
 });
