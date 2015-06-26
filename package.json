@@ -10,11 +10,12 @@
   },
   "readmeFilename": "README.md",
   "dependencies": {
-    "request": "latest",
     "async": "latest",
+    "chalk": "^1.0.0",
+    "cheerio": "latest",
     "lodash": "latest",
     "mime": "latest",
-    "cheerio": "latest"
+    "request": "latest"
   },
   "devDependencies": {
     "mocha": "latest",
