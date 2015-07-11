@@ -7,9 +7,10 @@
  */
 
 module.exports = {
-  // Filter out replacements that we might not want to apply.
-  // First argument to predicate is the resource's original URL.
-  // Second argument is the generated data URI.
+  /**
+   * Filter out replacements that we might not want to apply to the document being bundled.
+   * @param {function} predicate - The predicate to test whether we want to keep a diff
+   */
   filterDiffs: function (predicate) {
     return function (diffs, callback) {
       var newDiffs = {};

@@ -30,6 +30,11 @@ function Bundler(url) {
   return this;
 }
 
+/**
+ * Register a new handler to a particular event.
+ * @param {string} hookname - The name of the event to have trigger the handler
+ * @param {function} handler - The handler function to evoke when the event fires
+ */
 Bundler.prototype.on = function (hookname, handler) {
   switch (hookname) {
   case 'originalRequest':
@@ -51,6 +56,10 @@ Bundler.prototype.on = function (hookname, handler) {
   return this;
 };
 
+/**
+ * Start the bundling process.
+ * @param {function(error, string)} callback - Callback called when bundling is complete
+ */
 Bundler.prototype.bundle = function (callback) {
   this.callback = callback;
   var initOptions = {
@@ -74,6 +83,11 @@ Bundler.prototype.bundle = function (callback) {
   }
 }
 
+/**
+ * Starts bundling with the main document requested and begins invoking handlers.
+ * @param {Bundler} bundler - The bundler with handlers registered to invoke
+ * @param {object} options - Options for the request call
+ */
 function makeBundle(bundler, options) {
   request(options, function (err, res, body) {
     if (err) {
@@ -84,6 +98,13 @@ function makeBundle(bundler, options) {
   });
 }
 
+/**
+ * Produces a closure wrapping the request function so that bundler properties
+ * and the response from the original request can be made available to handlers
+ * @param {Bundler} bundler - The bundler that is executing its handlers
+ * @param {object} originalResponse - The response from the first request call
+ * @param {Buffer} originalBody - The body of the first document requested
+ */
 function wrappedRequest(bundler, originalResponse, originalBody) {
   return function (opts, callback) {
     if (typeof opts === 'string') {
@@ -126,6 +147,12 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
   };
 }
 
+/**
+ * Begins the process of invoking resource handlers in parallel.
+ * @param {Bundler} bundler - The bundler whose handlers are being executed
+ * @param {string} originalDoc - The body of the original document requested
+ * @param {function} requestFn - A wrapper around the request function
+ */
 function invokeHandlers(bundler, originalDoc, requestFn) {
   var handlers = [];
   for (var i = 0, len = bundler.resourceHandlers.length; i < len; ++i) {
@@ -147,6 +174,12 @@ function invokeHandlers(bundler, originalDoc, requestFn) {
   });
 }
 
+/**
+ * Invoke handlers for managing diffs produced.
+ * @param {Bundler} bundler - The bundler whose handlers are being executed
+ * @param {string} html - The content of the document being bundled
+ * @param {object} diffs - The collection of diffs produced by handlers
+ */
 function handleDiffs(bundler, html, diffs) {
   async.reduce(bundler.diffHooks, diffs, function (memo, hook, next) {
     hook(memo, next);

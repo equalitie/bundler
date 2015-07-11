@@ -30,7 +30,8 @@ const LogColors = [
   coloring(chalk.bgYellow.black, '[ERROR]')
 ];
 
-/* Standard line-based log formatter
+/**
+ * Standard line-based log formatter
  * @param {string} level - The name of the log level to log at
  * @param {[any]} args - The array of arguments to log out
  */
@@ -38,7 +39,8 @@ function formatLine(level, args) {
   return LogColors[level](joinAsString(args, ' '));
 }
 
-/* JSON-based log formatter used to log argument and level information instead of just text
+/**
+ * JSON-based log formatter used to log argument and level information instead of just text
  * @param {string} level - The name of the log level to log at
  * @param {[any]} args - The array of arguments to log out
  */
@@ -55,7 +57,8 @@ function formatJSON(level, args) {
   return JSON.stringify(obj);
 }
 
-/* Create a writer that logs to stdout.
+/**
+ * Create a writer that logs to stdout.
  */
 function stdoutWriter() {
   return {
@@ -64,7 +67,8 @@ function stdoutWriter() {
   };
 }
 
-/* Create a writer that logs to stderr.
+/**
+ * Create a writer that logs to stderr.
  */
 function stderrWriter() {
   return {
@@ -73,7 +77,8 @@ function stderrWriter() {
   };
 }
 
-/* Create a writer that logs to a file.
+/**
+ * Create a writer that logs to a file.
  * @param {string} filename - The path to the file to log to
  */
 function fileWriter(filename) {
@@ -87,7 +92,9 @@ function fileWriter(filename) {
   };
 }
 
-/* Create a logger
+/**
+ * Create a logger
+ * @constructor
  * config {
  *   threshold: LogLevel, - The minimum log level at which a log is written
  *   default: optional object {
@@ -119,7 +126,8 @@ function Logger(config) {
   }
 }
 
-/* Invoke each of the log writer functions assigned for a given log level if it
+/**
+ * Invoke each of the log writer functions assigned for a given log level if it
  * exceeds the configured threshold value after calling the appropriate formatter.
  * @param {string} level - The name of the log level to use
  * @param {[any]} args   - The data to output
@@ -145,7 +153,8 @@ Logger.prototype._log = function (level, args) {
 
 /* Convenience methods to call log at each output level */
 
-/* Convert an array-like object containing integer keys into an array
+/**
+ * Convert an array-like object containing integer keys into an array
  */
 function objToArray(obj) {
   var arr = [];
@@ -185,6 +194,9 @@ Logger.prototype.error = function () {
   this._log(LogLevels.error, objToArray(arguments));
 };
 
+/**
+ * Called to free resources held by the logger.
+ */
 Logger.prototype.destroy = function () {
   var outputs = Object.keys(this.outputs);
   for (var i = 0, len = outputs.length; i < len; i++) {

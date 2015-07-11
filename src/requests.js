@@ -2,16 +2,15 @@
  ** Pre-Original-Request Handlers **
  ***********************************
  *
- * Handlers called before making the first request for the original
- * url provided to the bundler.
- * Arguments:
- *   options  - The options object to be passed to `request`.
- *   callback - The iterating callback `async` uses to call the next handler.
  */
 
 var _ = require('lodash');
 
 module.exports = {
+  /**
+   * Remove a set of headers from a request by setting their values to empty strings.
+   * @param {[string]} - An array of header names to remove
+   */
   stripHeaders: function (headers) {
     return function (options, callback) {
       if (!options.hasOwnProperty('headers')) {
@@ -24,6 +23,10 @@ module.exports = {
     };
   },
 
+  /**
+   * Spoof a set of headers with specific values.
+   * @param {object} spoofs - An object mapping header names to their spoofed values
+   */
   spoofHeaders: function (spoofs) {
     return function (options, callback) {
       if (!options.hasOwnProperty('headers')) {
@@ -34,6 +37,10 @@ module.exports = {
     };
   },
 
+  /**
+   * Configure a request to use a proxy.
+   * @param {string} url - The URL of the proxy server
+   */
   proxyTo: function (url) {
     return function (options, callback) {
       options.proxy = url;
@@ -41,6 +48,12 @@ module.exports = {
     };
   },
 
+  /**
+   * Instruct request to follow redirects to some degree.
+   * @param {boolean} first - Whether to follow the first request
+   * @param {boolean} all - Whether to follow all requests
+   * @param {int} limit - The maximum number of redirects to follow
+   */
   followRedirects: function (first, all, limit) {
     return function (options, callback) {
       options.followRedirect = first;

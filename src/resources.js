@@ -5,6 +5,9 @@ module.exports = {
 
   /* resourceRetrieved handlers */
 
+  /**
+   * Step into CSS files to bundle url() calls within them
+   */
   bundleCSSRecursively: function (request, options, body, diffs, response, callback) {
     var ct = response.headers['content-type'];
     ct = ct ? ct : response.headers['Content-Type'];
