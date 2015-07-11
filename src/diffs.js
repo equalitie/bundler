@@ -6,8 +6,7 @@
  * to be made to the originally fetched page's source code.
  */
 
-module.exports = function (logger) {
-  return {
+module.exports = {
   /**
    * Filter out replacements that we might not want to apply to the document being bundled.
    * @param {function} predicate - The predicate to test whether we want to keep a diff
@@ -24,5 +23,4 @@ module.exports = function (logger) {
       callback(null, newDiffs);
     };
   }
-  }; // END RETURN OBJECT
-}    // END MODULE DEFINITION
+};

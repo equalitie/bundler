@@ -13,17 +13,11 @@ var cheerio = require('cheerio');
 var urllib = require('url');
 var path = require('path');
 var fs = require('fs');
-var logging = require('./logging');
-
-module.exports = function (loggerConfig) {
-
-var logger = new logging.Logger(loggerConfig);
-
-var requests = require('./requests')(logger);
-var handlers = require('./handlers')(logger);
-var resources = require('./resources')(logger);
-var diffs = require('./diffs')(logger);
-var helpers = require('./helpers')(logger);
+var requests = require('./requests');
+var handlers = require('./handlers');
+var resources = require('./resources');
+var diffs = require('./diffs');
+var helpers = require('./helpers');
 
 function Bundler(url) {
   this.url = url;
@@ -67,13 +61,13 @@ Bundler.prototype.on = function (hookname, handler) {
  * @param {function(error, string)} callback - Callback called when bundling is complete
  */
 Bundler.prototype.bundle = function (callback) {
-  var thisBundler = this;
   this.callback = callback;
   var initOptions = {
       url: this.url,
       strictSSL: false,
       rejectUnauthorized: false
   };
+  var thisBundler = this;
   if (typeof this.url === 'undefined') {
     callback(new Error('No URL provided to bundler.'), null);
   } else {
@@ -199,19 +193,12 @@ function handleDiffs(bundler, html, diffs) {
   });
 }
 
-var module_data = {
-  Bundler: Bundler,
-  quit: function () {
-    logger.destroy();
-  }
+module.exports = {
+  Bundler: Bundler
 };
 
-_.extend(module_data, helpers);
-_.extend(module_data, requests);
-_.extend(module_data, handlers);
-_.extend(module_data, resources);
-_.extend(module_data, diffs);
-
-return module_data;
-};
-
+_.extend(module.exports, helpers);
+_.extend(module.exports, requests);
+_.extend(module.exports, handlers);
+_.extend(module.exports, resources);
+_.extend(module.exports, diffs);

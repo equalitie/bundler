@@ -1,7 +1,6 @@
-module.exports = function (logger) {
-  var helpers = require('./helpers')(logger);
-  
-  return {
+var helpers = require('./helpers');
+
+module.exports = {
   /* resourceRequest handlers */
 
   /* resourceRetrieved handlers */
@@ -18,5 +17,4 @@ module.exports = function (logger) {
       callback(null, {});
     }
   }
-  }; // END OBJECT REUTRN
-};   // END MODULE DEFINITION
+};
