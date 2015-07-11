@@ -9,9 +9,11 @@
 
 var async = require('async');
 var urllib = require('url');
-var helpers = require('./helpers');
 
-module.exports = {
+module.exports = function (logger) {
+  var helpers = require('./helpers')(logger);
+
+  return {
   /**
    * Wrap a regular handler like replaceImages in a predicated handler so that it is only
    * invoked if the predicate (a function of the original document and url of the resource)
@@ -96,4 +98,5 @@ module.exports = {
       });
     }, callback);
   }
-};
+  }; // END RETURN OBJECT
+};   // END MODULE DEFINITION

@@ -11,7 +11,7 @@ function joinAsString(items, joiner) {
 }
 
 // Act like an enum of log levels
-const LogLevels = { silly: 1, debug: 2, info: 3, verbose: 4, warning: 5, error: 6 };
+const LogLevels = { silly: 1, debug: 2, info: 3, verbose: 4, warning: 5, error: 6, none: 100};
 const LevelNames = ['', 'silly', 'debug', 'info', 'verbose', 'warning', 'error'];
 
 function coloring(color, prefix) {
@@ -209,6 +209,14 @@ Logger.prototype.destroy = function () {
   }
 };
 
+var noLogging = {
+  threshold: logging.LogLevels.none,
+  default: {
+    outputs: [],
+    formatter: function () { return null; }
+  }
+};
+
 module.exports = {
   Logger: Logger,
   LogLevels: LogLevels,
@@ -216,5 +224,6 @@ module.exports = {
   formatJSON: formatJSON,
   stdoutWriter: stdoutWriter,
   stderrWriter: stderrWriter,
-  fileWriter: fileWriter
+  fileWriter: fileWriter,
+  noLogging: noLogging
 }

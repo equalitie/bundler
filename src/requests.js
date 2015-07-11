@@ -6,7 +6,8 @@
 
 var _ = require('lodash');
 
-module.exports = {
+module.exports = function (logger) {
+  return {
   /**
    * Remove a set of headers from a request by setting their values to empty strings.
    * @param {[string]} - An array of header names to remove
@@ -62,4 +63,5 @@ module.exports = {
       callback(null, options);
     };
   }
-};
+  }; // END OBJECT RETURN
+};   // END MODULE DEFINITION
