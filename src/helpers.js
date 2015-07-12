@@ -10,6 +10,7 @@ var async = require('async');
 var _ = require('lodash');
 var cheerio = require('cheerio');
 var mime = require('mime');
+var logger = require('./logger');
 
 /**
  * Produce a Data URI for a given resource.
@@ -42,6 +43,7 @@ function makeDiff(request, baseURL, resource, callback) {
   var options = { url: resourceURL, encoding: null };
   request(options, function (err, response, body) {
     if (err) {
+      logger.error(err.message);
       if (err.message.substring(0, 11) === 'Invalid URI') {
         callback(null, response, {});
       } else {
@@ -175,6 +177,7 @@ module.exports = {
     });
     async.parallel(elementHandlers, function (err, diffs) {
       if (err) {
+        logger.error(err.message);
         callback(err, {});
       } else {
         var allDiffs = {};

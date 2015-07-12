@@ -18,6 +18,7 @@ var handlers = require('./handlers');
 var resources = require('./resources');
 var diffs = require('./diffs');
 var helpers = require('./helpers');
+var logger = require('./logger');
 
 function Bundler(url) {
   this.url = url;
@@ -69,12 +70,14 @@ Bundler.prototype.bundle = function (callback) {
   };
   var thisBundler = this;
   if (typeof this.url === 'undefined') {
+    logger.error('No URL provided to bundler.');
     callback(new Error('No URL provided to bundler.'), null);
   } else {
     async.reduce(this.originalRequestHooks, initOptions, function (memo, hook, next) {
       hook(memo, next);
     }, function (err, options) {
       if (err) {
+        logger.error(err.message);
         this.callback(err, null);
       } else {
         makeBundle(thisBundler, options);
@@ -91,6 +94,7 @@ Bundler.prototype.bundle = function (callback) {
 function makeBundle(bundler, options) {
   request(options, function (err, res, body) {
     if (err) {
+      logger.error(err.message);
       bundler.callback(err, null);
     } else {
       invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
@@ -110,15 +114,18 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
     if (typeof opts === 'string') {
       opts = { url : opts };
     }
+    logger.info('Making request with options: ', opts);
     async.reduce(bundler.resourceRequestHooks, opts, function (memo, hook, next) {
       hook(memo, next, originalBody, originalResponse);
     }, function (err, options) {
       if (err) {
+        logger.error(err.message);
         bundler.callback(err, null);
       } else {
         options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
+            logger.error(err.message);
             bundler.callback(err, null);
           } else {
             var contentType = response.headers['content-type'];
@@ -127,13 +134,15 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
               callback(null, response, body);
             } else {
               body = body.toString();
-
+              logger.verbose('Calling resourceReceivedHooks');
               async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
                 nextHook(wrappedRequest(bundler, response, body), options, body, memoDiffs, response, iterFn);
               }, function (error, diffs) {
                 if (error) {
+                  logger.error(error.message);
                   callback(error, response, body);
                 } else {
+                  logger.verbose('Applying diffs to document');
                   var newBody = helpers.applyDiffs(body, diffs);
                   callback(null, response, new Buffer(newBody));
                 }
@@ -166,9 +175,11 @@ function invokeHandlers(bundler, originalDoc, requestFn) {
   }
   async.parallel(handlers, function (err, diffs) {
     if (err) {
+      logger.error(err.message);
       bundler.callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
+      logger.verbose('Calling diffHooks');
       handleDiffs(bundler, originalDoc, allDiffs);
     }
   });
@@ -185,9 +196,11 @@ function handleDiffs(bundler, html, diffs) {
     hook(memo, next);
   }, function (err, newDiffs) {
     if (err) {
+      logger.error(err.message);
       bundler.callback(err, null);
     } else {
       html = helpers.applyDiffs(html, newDiffs);
+      logger.info('Succeeded in producing bundle');
       bundler.callback(null, html);
     }
   });
