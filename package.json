@@ -15,7 +15,8 @@
     "cheerio": "latest",
     "lodash": "latest",
     "mime": "latest",
-    "request": "latest"
+    "request": "latest",
+    "winston": "latest"
   },
   "devDependencies": {
     "mocha": "latest",
