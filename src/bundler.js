@@ -23,7 +23,9 @@ var logger = require('./logger');
 function Bundler(url) {
   this.url = url;
   this.resourceHandlers = new Array();
+  this.resourceModifiers = new Array();
   this.originalRequestHooks = new Array();
+  this.originalModifiers = new Array();
   this.resourceRequestHooks = new Array();
   this.resourceReceivedHooks = new Array();
   this.diffHooks = new Array();
@@ -53,6 +55,25 @@ Bundler.prototype.on = function (hookname, handler) {
   case 'diffsReceived':
     this.diffHooks.push(handler);
     break;
+  }
+  return this;
+};
+
+/**
+ * Register a function to modify the content of a document (either the original
+ * page or a resource contained within it).
+ * This is useful for doing some pre-processing on documents before running handlers
+ * that build up diffs. Sometimes you need to make modifications before ever making
+ * more requests.
+ * @param {string} origOrRsrc - Either the string "original" or "resource"
+ * @param {function} modifier - A function to modify the string contents of a document
+ */
+Bundler.prototype.overwrite = function (origOrResrc, modifier) {
+  switch (origOrResrc) {
+  case 'original':
+    this.originalModifiers.push(modifier);
+  case 'resource':
+    this.resourceModifiers.push(modifier);
   }
   return this;
 };
@@ -97,7 +118,18 @@ function makeBundle(bundler, options) {
       logger.error(err.message);
       bundler.callback(err, null);
     } else {
-      invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
+      // Invoke the modifiers intended to manipulate the original document before
+      // invoking any handlers on it.
+      async.reduce(this.originalModifiers, body.toString(), function (docBody, hook, next) {
+        hook(docBody, next);
+      }, function (err, originalBodyModified) {
+        if (err) {
+          logger.error(err.message);
+          bundler.callback(err, null);
+        } else {
+          invokeHandlers(bundler, body, wrappedRequest(bundler, res, originalBodyModified));
+        }
+      });
     }
   });
 }
@@ -110,6 +142,7 @@ function makeBundle(bundler, options) {
  * @param {Buffer} originalBody - The body of the first document requested
  */
 function wrappedRequest(bundler, originalResponse, originalBody) {
+  // TODO - Refactor the shit out of this
   return function (opts, callback) {
     if (typeof opts === 'string') {
       opts = { url : opts };
@@ -134,20 +167,32 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
               callback(null, response, body);
             } else {
               body = body.toString();
-              logger.verbose('Calling resourceReceivedHooks');
-              async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
-                nextHook(wrappedRequest(bundler, response, body), options, body, memoDiffs, response, iterFn);
-              }, function (error, diffs) {
-                if (error) {
-                  logger.error(error.message);
-                  callback(error, response, body);
+              // Invoke modifier functions registered to modify the content of a received resource
+              // before accumulating diffs that will only be applied at the end of the process
+              async.reduce(bundler.resourceModifiers, body, function (resBody, hook, next) {
+                hook(resBody, next);
+              }, function (err, resourceBodyModified) {
+                if (err) {
+                  logger.error(err.message);
+                  bundler.callback(err, null);
                 } else {
-                  logger.verbose('Applying diffs to document');
-                  var newBody = helpers.applyDiffs(body, diffs);
-                  callback(null, response, new Buffer(newBody));
+                  logger.verbose('Calling resourceReceivedHooks');
+                  async.reduce(bundler.resourceReceivedHooks, {}, function (memoDiffs, nextHook, iterFn) {
+                    nextHook(
+                      wrappedRequest(bundler, response, resourceBodyBodified),
+                      options, resourceBodyModified, memoDiffs, response, iterFn);
+                  }, function (error, diffs) {
+                    if (error) {
+                      logger.error(error.message);
+                      callback(error, response, resourceBodyModified);
+                    } else {
+                      logger.verbose('Applying diffs to document');
+                      var newBody = helpers.applyDiffs(resourceBodyModified, diffs);
+                      callback(null, response, new Buffer(newBody));
+                    }
+                  });
                 }
               });
-
             }
           }
         });
