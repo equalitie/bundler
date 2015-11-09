@@ -1,7 +1,7 @@
 {
   "name": "equalitie-bundler",
   "description": "A utility for inlining resources used by web pages using data URI schemes",
-  "version": "1.1.2",
+  "version": "1.1.3",
   "engines": ">= 0.10.0",
   "author": "Zack Mullaly <redwire@riseup.net>",
   "main": "./src/bundler.js",
