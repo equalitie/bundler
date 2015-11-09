@@ -94,7 +94,8 @@ Bundler.prototype.bundle = function (callback) {
 function makeBundle(bundler, options) {
   request(options, function (err, res, body) {
     if (err) {
-      logger.error(err.message);
+      logger.error('------ERROR------ in makeBundle\n' + err.message);
+      logger.info('URL: ' + options.url);
       bundler.callback(err, null);
     } else {
       invokeHandlers(bundler, body, wrappedRequest(bundler, res, body));
@@ -125,8 +126,14 @@ function wrappedRequest(bundler, originalResponse, originalBody) {
         options.encoding = null;
         request(options, function (err, response, body) {
           if (err) {
-            logger.error(err.message);
-            bundler.callback(err, null);
+            logger.error('------ERROR------ in wrappedRequest\n' + err.message);
+            logger.info('URL: ' + options.url);
+            if (err.message.substring(0, 11) === 'Invalid URI' ||
+                err.message.substring(0, 16) === 'Invalid protocol') {
+              callback(null, null, new Buffer(''));
+            } else {
+              bundler.callback(err, null);
+            }
           } else {
             var contentType = response.headers['content-type'];
             contentType = contentType ? contentType : response.headers['Content-Type'];
@@ -179,7 +186,7 @@ function invokeHandlers(bundler, originalDoc, requestFn) {
       bundler.callback(err, null);
     } else {
       var allDiffs = _.reduce(diffs, _.extend);
-      logger.verbose('Calling diffHooks');
+      logger.verbose('Calling', bundler.diffHooks.length, 'diffHooks');
       handleDiffs(bundler, originalDoc, allDiffs);
     }
   });
@@ -195,10 +202,15 @@ function handleDiffs(bundler, html, diffs) {
   async.reduce(bundler.diffHooks, diffs, function (memo, hook, next) {
     hook(memo, next);
   }, function (err, newDiffs) {
+    logger.debug('Finished calling diff handlers');
+    logger.debug('err is', err);
     if (err) {
       logger.error(err.message);
       bundler.callback(err, null);
     } else {
+      logger.debug('About to apply diffs');
+      console.log(newDiffs);
+      console.log('^^ newDiffs ^^');
       html = helpers.applyDiffs(html, newDiffs);
       logger.info('Succeeded in producing bundle');
       bundler.callback(null, html);

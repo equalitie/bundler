@@ -1,7 +1,14 @@
+var fs = require('fs');
+var http = require('http');
+var urllib = require('url');
+var path = require('path');
 var should = require('should');
 var request = require('request');
 var cheerio = require('cheerio');
 var bundler = require('../src/bundler');
+
+// Base of path to resources to be served for testing purposes
+const RESOURCE_BASE = './test/resources';
 
 describe('helpers', function () {
   describe('mimetype', function () {
@@ -186,7 +193,7 @@ describe('handlers', function () {
         should(1).be.exactly(2); // We should never get here, so fail if we do.  
       })('request placeholder', 'body placeholder', 'test url', done);
       // Wait a second to make sure the handler function provided to predicated is not called.
-      setTimeout(done, 1000);
+      setTimeout(function () {}, 1000);
     });
   });
 });
@@ -201,6 +208,44 @@ describe('requests', function() {
   describe('handleRedirect', function () {
     it('should not do anything for now', function (done) {
       done();
+    });
+  });
+});
+
+describe('resources', function () {
+  describe('bundleCSSRecursively', function () {
+    before(function () {
+      this.server = http.createServer(function (req, res) {
+        var requested = urllib.parse(req.url).pathname;
+        fs.readFile(path.join(RESOURCE_BASE, requested), function (err, content) {
+          if (err) {
+            res.statusCode = 404;
+            res.end();
+          } else {
+             res.statusCode = 200;
+             res.write(content);
+             res.end();
+          }
+        });
+      });
+      this.server.listen(9009);
+    });
+
+    it('should not get stuck in an infinite loop because of mutually recursive imports', function (done) {
+      var b = new bundler.Bundler('http://localhost:9009/index.html');
+      b.on('originalReceived', bundler.replaceCSSFiles);
+      b.on('resourceReceived', bundler.bundleCSSRecursively);
+      b.bundle(function (err, bundle) {
+        should.not.exist(err);
+        should.exist(bundle);
+        bundle.should.have.property('length');
+        bundle.length.should.be.greaterThan(0);
+        done();
+      });
+    });
+
+    after(function () {
+      this.server.close();
     });
   });
 });

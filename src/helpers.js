@@ -43,12 +43,15 @@ function makeDiff(request, baseURL, resource, callback) {
   var options = { url: resourceURL, encoding: null };
   request(options, function (err, response, body) {
     if (err) {
-      logger.error(err.message);
-      if (err.message.substring(0, 11) === 'Invalid URI') {
+      logger.error('------ERROR------\n' + err.message);
+      logger.info('URL: ' + resourceURL);
+      if (err.message.substring(0, 11) === 'Invalid URI' || err.message.substring(0, 16) === 'Invalid protocol') {
         callback(null, response, {});
       } else {
         callback(err, response, {});
       }
+    } else if (response === null) {
+      callback(null, null, {});
     } else {
       var datauri = dataURI(response, resourceURL, body);
       var diff = {};
@@ -100,7 +103,10 @@ function mimetype(url) {
 function applyDiffs(string, diffs) {
   var keys = Object.keys(diffs);
   for (var i = 0, len = keys.length; i < len; ++i) {
+    console.log('Inserting\n', diffs[keys[i]], '\nin place of', keys[i]);
+    console.log('Applying diff #', i + 1);
     string = strReplaceAll(string, keys[i], diffs[keys[i]]);
+    console.log('Done');
   }
   return string;
 }
