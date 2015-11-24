@@ -103,10 +103,7 @@ function mimetype(url) {
 function applyDiffs(string, diffs) {
   var keys = Object.keys(diffs);
   for (var i = 0, len = keys.length; i < len; ++i) {
-    console.log('Inserting\n', diffs[keys[i]], '\nin place of', keys[i]);
-    console.log('Applying diff #', i + 1);
     string = strReplaceAll(string, keys[i], diffs[keys[i]]);
-    console.log('Done');
   }
   return string;
 }

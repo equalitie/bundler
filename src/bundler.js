@@ -209,8 +209,6 @@ function handleDiffs(bundler, html, diffs) {
       bundler.callback(err, null);
     } else {
       logger.debug('About to apply diffs');
-      console.log(newDiffs);
-      console.log('^^ newDiffs ^^');
       html = helpers.applyDiffs(html, newDiffs);
       logger.info('Succeeded in producing bundle');
       bundler.callback(null, html);
