@@ -69,9 +69,10 @@ function makeDiff(request, baseURL, resource, callback) {
  */
 function strReplaceAll(string, str1, str2) {
   var index = string.indexOf(str1);
+  var replaceLength = str2.length;
   while (index >= 0) {
     string = string.replace(str1, str2);
-    index = string.indexOf(str1, index);
+    index = string.indexOf(str1, index + replaceLength);
   }
   return string;
 }
